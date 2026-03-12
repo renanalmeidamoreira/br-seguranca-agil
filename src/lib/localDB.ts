@@ -94,7 +94,7 @@ export function logActivity(userName: string, action: string) {
     timestamp: new Date().toISOString(),
     user: userName,
     action,
-  });
+  } as any);
 }
 
 export interface CaseData {
