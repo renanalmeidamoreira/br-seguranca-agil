@@ -7,27 +7,10 @@ import {
   Chart as ChartJS, ArcElement, Tooltip, Legend,
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
+import type { RiskAssessment } from '@/pages/RiskPage';
+import { priorityColor } from '@/pages/RiskPage';
 
 ChartJS.register(ArcElement, Tooltip, Legend, ChartDataLabels);
-
-interface RiskAssessment {
-  id: string;
-  displayId: string;
-  title: string;
-  local: string;
-  category: string;
-  description: string;
-  gravidade: number;
-  urgencia: number;
-  tendencia: number;
-  gut: number;
-  priority: string;
-  mitigation: string;
-  responsible: string;
-  status: string;
-  createdAt: string;
-  createdBy: string;
-}
 
 interface Props {
   open: boolean;
@@ -36,23 +19,9 @@ interface Props {
   risks: RiskAssessment[];
 }
 
-const priorityColor: Record<string, string> = {
-  'Crítico': 'bg-destructive/20 text-destructive',
-  'Alto': 'bg-warning/20 text-warning',
-  'Médio': 'bg-info/20 text-info',
-  'Baixo': 'bg-success/20 text-success',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  identificado: 'Identificado',
-  em_tratamento: 'Em Tratamento',
-  mitigado: 'Mitigado',
-  aceito: 'Aceito',
-};
-
 export default function RiskPlantModal({ open, onOpenChange, plant, risks }: Props) {
   const priorityCounts = useMemo(() => {
-    const counts = { 'Crítico': 0, 'Alto': 0, 'Médio': 0, 'Baixo': 0 };
+    const counts = { 'Crítico': 0, 'Alto': 0, 'Moderado': 0, 'Baixo': 0 };
     risks.forEach(r => { if (counts[r.priority as keyof typeof counts] !== undefined) counts[r.priority as keyof typeof counts]++; });
     return counts;
   }, [risks]);
@@ -78,8 +47,7 @@ export default function RiskPlantModal({ open, onOpenChange, plant, risks }: Pro
     plugins: {
       legend: { position: 'bottom' as const, labels: { color: '#d1d5db' } },
       datalabels: {
-        color: '#fff',
-        font: { weight: 'bold' as const, size: 14 },
+        color: '#fff', font: { weight: 'bold' as const, size: 14 },
         formatter: (v: number) => v > 0 ? v : '',
       },
     },
@@ -116,22 +84,22 @@ export default function RiskPlantModal({ open, onOpenChange, plant, risks }: Pro
             <thead className="bg-secondary">
               <tr>
                 <th className="text-left p-2">ID</th>
-                <th className="text-left p-2">Título</th>
-                <th className="text-left p-2">Categoria</th>
+                <th className="text-left p-2">Fato</th>
+                <th className="text-left p-2">Setor</th>
                 <th className="text-left p-2">GUT</th>
                 <th className="text-left p-2">Prioridade</th>
                 <th className="text-left p-2">Status</th>
               </tr>
             </thead>
             <tbody>
-              {risks.sort((a, b) => b.gut - a.gut).map(r => (
+              {risks.sort((a, b) => b.score - a.score).map(r => (
                 <tr key={r.id} className="border-t border-border">
                   <td className="p-2 font-mono text-primary">{r.displayId}</td>
-                  <td className="p-2">{r.title}</td>
-                  <td className="p-2">{r.category}</td>
-                  <td className="p-2 font-bold">{r.gut}</td>
-                  <td className="p-2"><Badge className={priorityColor[r.priority] || ''}>{r.priority}</Badge></td>
-                  <td className="p-2"><Badge variant="outline">{STATUS_LABELS[r.status] || r.status}</Badge></td>
+                  <td className="p-2 max-w-xs truncate">{r.fact}</td>
+                  <td className="p-2">{r.sector}</td>
+                  <td className="p-2 font-bold">{r.score}</td>
+                  <td className="p-2"><Badge className={priorityColor(r.priority)}>{r.priority}</Badge></td>
+                  <td className="p-2"><Badge variant="outline">{r.status}</Badge></td>
                 </tr>
               ))}
               {risks.length === 0 && (
