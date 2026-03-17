@@ -1,144 +1,153 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { localDB, DB_KEYS, generateSequentialDisplayId } from '@/lib/localDB';
+import { localDB, DB_KEYS, generateSequentialDisplayId, formatDate } from '@/lib/localDB';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Plus, Trash2, MapPin, Eye } from 'lucide-react';
+import { Shield, Plus, Trash2, MapPin, Eye, X } from 'lucide-react';
 import RiskPlantModal from '@/components/risk/RiskPlantModal';
 import RiskForm from '@/components/risk/RiskForm';
 
 export interface RiskAssessment {
   id: string;
   displayId: string;
-  title: string;
-  local: string;
-  category: string;
-  description: string;
-  gravidade: number;
-  urgencia: number;
-  tendencia: number;
-  gut: number;
+  plant: string;
+  sector: string;
+  fact: string;
+  evaluationDate: string;
+  g: number;
+  u: number;
+  t: number;
+  score: number;
   priority: string;
-  mitigation: string;
+  level: number;
+  recommendation: string;
+  actionPlan: string;
   responsible: string;
-  status: 'identificado' | 'em_tratamento' | 'mitigado' | 'aceito';
+  date: string;
+  status: string;
   createdAt: string;
   createdBy: string;
 }
 
-export const RISK_CATEGORIES = ['Patrimonial', 'Pessoal', 'Operacional', 'Ambiental', 'Tecnológico', 'Financeiro'];
-
-export function calcPriority(gut: number): string {
-  if (gut >= 100) return 'Crítico';
-  if (gut >= 50) return 'Alto';
-  if (gut >= 20) return 'Médio';
-  return 'Baixo';
+function calcGut(g: number, u: number, t: number) {
+  const score = g * u * t;
+  let priority = 'Baixo';
+  let level = 1;
+  if (score >= 100) { priority = 'Crítico'; level = 4; }
+  else if (score >= 50) { priority = 'Alto'; level = 3; }
+  else if (score >= 20) { priority = 'Moderado'; level = 2; }
+  return { score, priority, level };
 }
 
 export function priorityColor(p: string): string {
   switch (p) {
     case 'Crítico': return 'bg-destructive/20 text-destructive';
     case 'Alto': return 'bg-warning/20 text-warning';
-    case 'Médio': return 'bg-info/20 text-info';
+    case 'Moderado': return 'bg-info/20 text-info';
     default: return 'bg-success/20 text-success';
   }
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  identificado: 'Identificado',
-  em_tratamento: 'Em Tratamento',
-  mitigado: 'Mitigado',
-  aceito: 'Aceito',
+  Pendente: 'Pendente', 'Em Andamento': 'Em Andamento', Concluído: 'Concluído', Cancelado: 'Cancelado',
 };
-
-function overallLevel(risks: RiskAssessment[]): string {
-  if (risks.some(r => r.priority === 'Crítico')) return 'Crítico';
-  if (risks.some(r => r.priority === 'Alto')) return 'Alto';
-  if (risks.some(r => r.priority === 'Médio')) return 'Médio';
-  return 'Baixo';
-}
 
 export default function RiskPage() {
   const { currentUser, log, showAlert } = useApp();
   const [risks, setRisks] = useState<RiskAssessment[]>(() => localDB.load<RiskAssessment>(DB_KEYS.risks));
   const [showForm, setShowForm] = useState(false);
   const [selectedPlant, setSelectedPlant] = useState<string | null>(null);
+  const [yearFilter, setYearFilter] = useState<string>('');
 
   const refresh = () => setRisks(localDB.load<RiskAssessment>(DB_KEYS.risks));
 
   const handleCreate = (form: any) => {
     const all = localDB.load<RiskAssessment>(DB_KEYS.risks);
-    const gut = form.gravidade * form.urgencia * form.tendencia;
+    const { score, priority, level } = calcGut(form.g, form.u, form.t);
     const newRisk: RiskAssessment = {
       id: crypto.randomUUID(),
       displayId: generateSequentialDisplayId('RSK', all),
-      ...form,
-      gut,
-      priority: calcPriority(gut),
-      status: 'identificado',
-      createdAt: new Date().toISOString(),
-      createdBy: currentUser.name,
+      plant: form.plant, sector: form.sector, fact: form.fact,
+      evaluationDate: form.evaluationDate,
+      g: form.g, u: form.u, t: form.t, score, priority, level,
+      recommendation: form.recommendation, actionPlan: form.actionPlan,
+      responsible: form.responsible, date: form.date, status: form.status,
+      createdAt: new Date().toISOString(), createdBy: currentUser.name,
     };
     localDB.add(DB_KEYS.risks, newRisk);
     log(`Cadastrou risco: ${newRisk.displayId}`);
-    showAlert('Risco cadastrado com sucesso!', 'success');
-    setShowForm(false);
-    refresh();
-  };
-
-  const updateStatus = (risk: RiskAssessment, status: RiskAssessment['status']) => {
-    localDB.update(DB_KEYS.risks, { ...risk, status });
-    refresh();
-    showAlert(`Status atualizado para: ${STATUS_LABELS[status]}`, 'info');
+    showAlert('Risco adicionado com sucesso!', 'success');
+    setShowForm(false); refresh();
   };
 
   const handleDelete = (id: string) => {
-    localDB.delete(DB_KEYS.risks, id);
-    refresh();
+    localDB.delete(DB_KEYS.risks, id); refresh();
     showAlert('Risco excluído.', 'warning');
   };
 
-  const stats = useMemo(() => ({
-    total: risks.length,
-    criticos: risks.filter(r => r.priority === 'Crítico').length,
-    altos: risks.filter(r => r.priority === 'Alto').length,
-    mitigados: risks.filter(r => r.status === 'mitigado').length,
-  }), [risks]);
-
-  // Group by plant/local
-  const plantGroups = useMemo(() => {
-    const groups: Record<string, RiskAssessment[]> = {};
-    risks.forEach(r => {
-      const plant = r.local || 'Sem Local';
-      if (!groups[plant]) groups[plant] = [];
-      groups[plant].push(r);
-    });
-    return Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
+  // Year options
+  const years = useMemo(() => {
+    const ySet = new Set<string>();
+    risks.forEach(r => { if (r.evaluationDate) ySet.add(r.evaluationDate.slice(0, 4)); });
+    return Array.from(ySet).sort().reverse();
   }, [risks]);
 
-  const selectedPlantRisks = useMemo(() => {
-    if (!selectedPlant) return [];
-    return risks.filter(r => (r.local || 'Sem Local') === selectedPlant);
-  }, [risks, selectedPlant]);
+  // Filtered risks
+  const filteredRisks = useMemo(() => {
+    let list = [...risks];
+    if (yearFilter) list = list.filter(r => r.evaluationDate?.startsWith(yearFilter));
+    return list;
+  }, [risks, yearFilter]);
+
+  // Plant groups
+  const plantGroups = useMemo(() => {
+    const groups: Record<string, RiskAssessment[]> = {};
+    filteredRisks.forEach(r => {
+      const p = r.plant || 'Sem Local';
+      if (!groups[p]) groups[p] = [];
+      groups[p].push(r);
+    });
+    return Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
+  }, [filteredRisks]);
+
+  // Filtered by plant for table
+  const tableRisks = useMemo(() => {
+    if (!selectedPlant) return filteredRisks;
+    return filteredRisks.filter(r => (r.plant || 'Sem Local') === selectedPlant);
+  }, [filteredRisks, selectedPlant]);
+
+  // Stats
+  const stats = useMemo(() => ({
+    total: filteredRisks.length,
+    criticos: filteredRisks.filter(r => r.priority === 'Crítico').length,
+    altos: filteredRisks.filter(r => r.priority === 'Alto').length,
+    moderados: filteredRisks.filter(r => r.priority === 'Moderado').length,
+  }), [filteredRisks]);
+
+  function overallLevel(arr: RiskAssessment[]): string {
+    if (arr.some(r => r.priority === 'Crítico')) return 'Crítico';
+    if (arr.some(r => r.priority === 'Alto')) return 'Alto';
+    if (arr.some(r => r.priority === 'Moderado')) return 'Moderado';
+    return 'Baixo';
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Shield className="w-7 h-7 text-primary" /> Avaliação de Risco
+          <Shield className="w-7 h-7 text-primary" /> Painel de Avaliação de Risco
         </h1>
-        <Button onClick={() => setShowForm(!showForm)}><Plus className="w-4 h-4 mr-2" /> Novo Risco</Button>
+        <Button onClick={() => setShowForm(!showForm)}><Plus className="w-4 h-4 mr-2" /> Adicionar Risco</Button>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Total', value: stats.total, color: 'text-primary' },
           { label: 'Críticos', value: stats.criticos, color: 'text-destructive' },
           { label: 'Altos', value: stats.altos, color: 'text-warning' },
-          { label: 'Mitigados', value: stats.mitigados, color: 'text-success' },
+          { label: 'Moderados', value: stats.moderados, color: 'text-info' },
         ].map(k => (
           <Card key={k.label}><CardContent className="p-4 text-center">
             <p className={`text-3xl font-bold ${k.color}`}>{k.value}</p>
@@ -159,22 +168,24 @@ export default function RiskPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {plantGroups.map(([plant, plantRisks]) => {
               const level = overallLevel(plantRisks);
-              const criticos = plantRisks.filter(r => r.priority === 'Crítico').length;
+              const isActive = selectedPlant === plant;
               return (
-                <Card key={plant} className="hover:border-primary/40 transition-colors cursor-pointer"
-                  onClick={() => setSelectedPlant(plant)}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold truncate">{plant}</h3>
-                      <Badge className={priorityColor(level)}>{level}</Badge>
+                <Card key={plant}
+                  className={`cursor-pointer transition-all hover:shadow-lg border-l-4 ${
+                    level === 'Crítico' ? 'border-l-destructive' :
+                    level === 'Alto' ? 'border-l-warning' :
+                    level === 'Moderado' ? 'border-l-info' : 'border-l-success'
+                  } ${isActive ? 'ring-2 ring-primary' : ''}`}
+                  onClick={() => setSelectedPlant(isActive ? null : plant)}>
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-bold">{plant}</h3>
+                      <p className="text-sm text-muted-foreground">{plantRisks.length} risco(s) mapeado(s)</p>
                     </div>
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>{plantRisks.length} risco(s)</span>
-                      {criticos > 0 && <span className="text-destructive font-bold">{criticos} crítico(s)</span>}
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Nível de Risco</p>
+                      <Badge className={`${priorityColor(level)} text-lg`}>{level}</Badge>
                     </div>
-                    <Button variant="ghost" size="sm" className="mt-2 w-full text-primary">
-                      <Eye className="w-4 h-4 mr-1" /> Ver Detalhes
-                    </Button>
                   </CardContent>
                 </Card>
               );
@@ -183,69 +194,75 @@ export default function RiskPage() {
         </div>
       )}
 
-      {/* Risk Matrix */}
+      {/* Table Header with Filters */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <h2 className="text-lg font-bold text-primary">
+          Gerenciamento de Riscos {yearFilter ? `(${yearFilter})` : '(Todos)'}
+          {selectedPlant ? ` / ${selectedPlant}` : ''}
+        </h2>
+        <div className="flex items-center gap-3">
+          <select value={yearFilter} onChange={e => setYearFilter(e.target.value)}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+            <option value="">Todos os anos</option>
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          {(selectedPlant || yearFilter) && (
+            <Button variant="outline" size="sm" onClick={() => { setSelectedPlant(null); setYearFilter(''); }}>
+              <X className="w-4 h-4 mr-1" /> Limpar Filtros
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Risk Table */}
       <Card>
-        <CardHeader><CardTitle className="text-lg">Matriz de Riscos</CardTitle></CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-5 gap-1 max-w-md">
-            {[5,4,3,2,1].map(g =>
-              [1,2,3,4,5].map(u => {
-                const score = g * u;
-                const inCell = risks.filter(r => r.gravidade === g && r.urgencia === u);
-                let bg = 'bg-success/20';
-                if (score >= 15) bg = 'bg-destructive/30';
-                else if (score >= 8) bg = 'bg-warning/30';
-                else if (score >= 4) bg = 'bg-info/20';
-                return (
-                  <div key={`${g}-${u}`} className={`${bg} rounded p-2 text-center min-h-[40px] flex items-center justify-center`}>
-                    {inCell.length > 0 && <span className="text-xs font-bold">{inCell.length}</span>}
-                  </div>
-                );
-              })
-            )}
-          </div>
-          <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-            <span>← Urgência →</span><span>↑ Gravidade</span>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-secondary">
+                <tr>
+                  <th className="text-left p-3 text-xs uppercase font-semibold">ID</th>
+                  <th className="text-left p-3 text-xs uppercase font-semibold">Planta</th>
+                  <th className="text-left p-3 text-xs uppercase font-semibold">Setor</th>
+                  <th className="text-left p-3 text-xs uppercase font-semibold">Fato Constatado</th>
+                  <th className="text-left p-3 text-xs uppercase font-semibold">Prioridade</th>
+                  <th className="text-left p-3 text-xs uppercase font-semibold">Status</th>
+                  <th className="text-left p-3 text-xs uppercase font-semibold">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tableRisks.sort((a, b) => b.score - a.score).map(risk => (
+                  <tr key={risk.id} className="border-t border-border hover:bg-secondary/50">
+                    <td className="p-3 font-mono text-primary">{risk.displayId}</td>
+                    <td className="p-3">{risk.plant}</td>
+                    <td className="p-3">{risk.sector}</td>
+                    <td className="p-3 max-w-xs truncate" title={risk.recommendation || risk.fact}>{risk.fact}</td>
+                    <td className="p-3"><Badge className={priorityColor(risk.priority)}>{risk.priority}</Badge></td>
+                    <td className="p-3">{risk.status}</td>
+                    <td className="p-3">
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(risk.id)}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {tableRisks.length === 0 && (
+                  <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Nenhum risco encontrado.</td></tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
 
-      {/* Risk List */}
-      <div className="space-y-3">
-        {risks.sort((a, b) => b.gut - a.gut).map(risk => (
-          <Card key={risk.id} className="hover:border-primary/30 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-mono text-primary">{risk.displayId}</span>
-                    <Badge className={priorityColor(risk.priority)}>{risk.priority} (GUT: {risk.gut})</Badge>
-                    <Badge variant="outline">{STATUS_LABELS[risk.status]}</Badge>
-                  </div>
-                  <p className="font-semibold">{risk.title}</p>
-                  <p className="text-sm text-muted-foreground">{risk.category} • {risk.local} • {risk.createdBy}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <select value={risk.status} onChange={e => updateStatus(risk, e.target.value as any)}
-                    className="text-sm rounded border border-input bg-background px-2 py-1">
-                    {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                  </select>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(risk.id)}>
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Plant Modal */}
+      {/* Plant Detail Modal - reuse existing component */}
       <RiskPlantModal
-        open={!!selectedPlant}
-        onOpenChange={(open) => { if (!open) setSelectedPlant(null); }}
-        plant={selectedPlant || ''}
-        risks={selectedPlantRisks}
+        open={false}
+        onOpenChange={() => {}}
+        plant=""
+        risks={[]}
       />
     </div>
   );
