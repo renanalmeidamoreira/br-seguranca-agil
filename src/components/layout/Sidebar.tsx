@@ -2,7 +2,7 @@ import { useApp } from '@/contexts/AppContext';
 import { USERS } from '@/lib/localDB';
 import {
   BarChart3, FolderOpen, CheckSquare, Shield, Search,
-  GitBranch, Send, UserX, History, CalendarDays
+  GitBranch, History, CalendarDays
 } from 'lucide-react';
 
 const navItems = [
@@ -13,8 +13,6 @@ const navItems = [
   { id: 'risco', label: 'Avaliação de Risco', icon: Shield },
   { id: 'busca', label: 'Busca Integrada', icon: Search },
   { id: 'analise', label: 'Análise & Insights', icon: GitBranch },
-  { id: 'drones', label: 'Missões de Drone', icon: Send },
-  { id: 'confidencial', label: 'Operações Confidenciais', icon: UserX },
   { id: 'logs', label: 'Logs de Atividade', icon: History },
 ];
 
@@ -23,12 +21,10 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 flex flex-col bg-card border-r border-border h-screen">
-      {/* Logo */}
       <div className="h-16 flex items-center justify-center text-2xl font-bold">
         SYN<span className="text-primary">A</span>PSE
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto synapse-scrollbar">
         {navItems.map(item => {
           const Icon = item.icon;
@@ -50,7 +46,6 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* User Area */}
       <div className="p-4 border-t border-border">
         <div className="flex items-center mb-4">
           <div className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary text-primary text-lg font-bold">

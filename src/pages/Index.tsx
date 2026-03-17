@@ -8,8 +8,6 @@ import RiskPage from '@/pages/RiskPage';
 import SchedulePage from '@/pages/SchedulePage';
 import SearchPage from '@/pages/SearchPage';
 import AnalyticsPage from '@/pages/AnalyticsPage';
-import DronesPage from '@/pages/DronesPage';
-import ConfidentialPage from '@/pages/ConfidentialPage';
 import LogsPage from '@/pages/LogsPage';
 
 function MainContent() {
@@ -23,8 +21,6 @@ function MainContent() {
     risco: <RiskPage />,
     busca: <SearchPage />,
     analise: <AnalyticsPage />,
-    drones: <DronesPage />,
-    confidencial: <ConfidentialPage />,
     logs: <LogsPage />,
   };
 
