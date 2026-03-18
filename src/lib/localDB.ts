@@ -90,11 +90,12 @@ export function generateSequentialDisplayId(prefix: string, dataArray: any[]): s
 }
 
 export function logActivity(userName: string, action: string) {
-  localDB.add(DB_KEYS.activityLogs, {
+  const entry = localDB.add(DB_KEYS.activityLogs, {
     timestamp: new Date().toISOString(),
     user: userName,
     action,
   } as any);
+  return entry;
 }
 
 export interface CaseData {

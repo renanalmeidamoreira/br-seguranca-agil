@@ -53,9 +53,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const log = useCallback((action: string) => {
     const entry = logActivity(currentUser.name, action);
     // === SYNC SUPABASE === marca log para sync
-    if (entry && (entry as any).id) {
-      markForSync(DB_KEYS.activityLogs, (entry as any).id);
-    }
+    markForSync(DB_KEYS.activityLogs, entry.id!);
   }, [currentUser.name]);
 
   const switchUser = useCallback((index: number) => {
