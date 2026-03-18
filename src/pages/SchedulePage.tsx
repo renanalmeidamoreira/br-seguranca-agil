@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { localDB, DB_KEYS, formatDate } from '@/lib/localDB';
+import { markForSync } from '@/lib/syncService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

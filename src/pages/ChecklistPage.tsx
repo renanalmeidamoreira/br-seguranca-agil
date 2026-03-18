@@ -146,6 +146,7 @@ export default function ChecklistPage() {
       createdBy: currentUser.name,
     };
     localDB.add(DB_KEYS.checklists, newCL);
+    markForSync(DB_KEYS.checklists, newCL.id);
     log(`Registrou checklist: ${newCL.displayId}`);
     showAlert('Checklist salvo com sucesso!', 'success');
     setForm(defaultForm()); setShowForm(false); refresh();

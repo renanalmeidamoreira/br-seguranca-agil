@@ -77,6 +77,7 @@ export default function RiskPage() {
       createdAt: new Date().toISOString(), createdBy: currentUser.name,
     };
     localDB.add(DB_KEYS.risks, newRisk);
+    markForSync(DB_KEYS.risks, newRisk.id);
     log(`Cadastrou risco: ${newRisk.displayId}`);
     showAlert('Risco adicionado com sucesso!', 'success');
     setShowForm(false); refresh();
