@@ -96,6 +96,7 @@ export default function SchedulePage() {
     };
     const updated = [...schedules, newSchedule];
     localDB.save(DB_KEYS.schedules, updated);
+    markForSync(DB_KEYS.schedules, newSchedule.id);
     log(`Criou cronograma para ${year}`);
     showAlert(`Cronograma ${year} criado!`, 'success');
     setSelectedYear(String(year));
