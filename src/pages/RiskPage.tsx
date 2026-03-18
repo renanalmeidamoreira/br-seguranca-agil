@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { localDB, DB_KEYS, generateSequentialDisplayId, formatDate } from '@/lib/localDB';
+import { markForSync } from '@/lib/syncService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -76,6 +77,7 @@ export default function RiskPage() {
       createdAt: new Date().toISOString(), createdBy: currentUser.name,
     };
     localDB.add(DB_KEYS.risks, newRisk);
+    markForSync(DB_KEYS.risks, newRisk.id);
     log(`Cadastrou risco: ${newRisk.displayId}`);
     showAlert('Risco adicionado com sucesso!', 'success');
     setShowForm(false); refresh();

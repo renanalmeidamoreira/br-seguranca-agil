@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { localDB, DB_KEYS, CaseData, USERS, UserProfile, logActivity } from '@/lib/localDB';
+import { markForSync } from '@/lib/syncService';
 
 interface AlertMessage {
   id: string;
@@ -50,7 +51,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const log = useCallback((action: string) => {
-    logActivity(currentUser.name, action);
+    const entry = logActivity(currentUser.name, action);
+    // === SYNC SUPABASE === marca log para sync
+    markForSync(DB_KEYS.activityLogs, entry.id!);
   }, [currentUser.name]);
 
   const switchUser = useCallback((index: number) => {
@@ -62,6 +65,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     refreshCases();
     log(`Criou novo caso: ${data.displayId}`);
     showAlert('Novo caso salvo com sucesso!', 'success');
+    // === SYNC SUPABASE ===
+    markForSync(DB_KEYS.occurrences, data.id);
   }, [refreshCases, log, showAlert]);
 
   const updateCase = useCallback((data: CaseData) => {
@@ -69,6 +74,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     refreshCases();
     log(`Atualizou caso: ${data.displayId}`);
     showAlert('Caso atualizado com sucesso!', 'success');
+    // === SYNC SUPABASE ===
+    markForSync(DB_KEYS.occurrences, data.id);
   }, [refreshCases, log, showAlert]);
 
   const deleteCase = useCallback((id: string) => {

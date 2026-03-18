@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { localDB, DB_KEYS, formatDate } from '@/lib/localDB';
+import { markForSync } from '@/lib/syncService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -95,6 +96,7 @@ export default function SchedulePage() {
     };
     const updated = [...schedules, newSchedule];
     localDB.save(DB_KEYS.schedules, updated);
+    markForSync(DB_KEYS.schedules, newSchedule.id);
     log(`Criou cronograma para ${year}`);
     showAlert(`Cronograma ${year} criado!`, 'success');
     setSelectedYear(String(year));
