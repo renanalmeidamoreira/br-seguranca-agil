@@ -1,6 +1,9 @@
 import { AppProvider, useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from '@/components/layout/Sidebar';
 import AlertContainer from '@/components/layout/AlertContainer';
+import SyncStatusBar from '@/components/layout/SyncStatusBar';
+import AuthPage from '@/pages/AuthPage';
 import DashboardPage from '@/pages/DashboardPage';
 import CasesPage from '@/pages/CasesPage';
 import ChecklistPage from '@/pages/ChecklistPage';
@@ -27,22 +30,38 @@ function MainContent() {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <main className="flex-1 p-6 overflow-y-auto synapse-scrollbar">
-        <div className="bg-warning/10 border-l-4 border-warning text-warning p-4 rounded-r-lg mb-6">
-          <p className="font-bold">⚠️ MODO OFFLINE ATIVADO</p>
-          <p className="text-sm opacity-80">Todos os dados estão sendo salvos localmente neste navegador. Não há backup na nuvem.</p>
-        </div>
+      <main className="flex-1 p-6 pb-14 overflow-y-auto synapse-scrollbar">
         {pageMap[activePage] || <DashboardPage />}
       </main>
       <AlertContainer />
+      <SyncStatusBar />
     </div>
   );
 }
 
-export default function Index() {
+function AuthenticatedApp() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground text-sm">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return <AuthPage />;
+
   return (
     <AppProvider>
       <MainContent />
     </AppProvider>
   );
+}
+
+export default function Index() {
+  return <AuthenticatedApp />;
 }
