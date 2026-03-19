@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   User, UserCog, Shield, HardHat, Briefcase,
-  Eye, Lock, Wrench, Truck, HeartPulse, Megaphone
+  Eye, Lock, Wrench, Truck, HeartPulse
 } from 'lucide-react';
 
 const AVATAR_ICONS = [
@@ -23,12 +23,12 @@ const AVATAR_ICONS = [
 ];
 
 const ACCENT_COLORS = [
-  { id: 'cyan', value: 'hsl(187, 72%, 53%)', tw: 'bg-primary' },
-  { id: 'green', value: 'hsl(160, 84%, 39%)', tw: 'bg-success' },
-  { id: 'orange', value: 'hsl(25, 95%, 53%)', tw: 'bg-orange-500' },
-  { id: 'blue', value: 'hsl(217, 91%, 60%)', tw: 'bg-info' },
-  { id: 'red', value: 'hsl(0, 84%, 60%)', tw: 'bg-destructive' },
-  { id: 'purple', value: 'hsl(271, 91%, 65%)', tw: 'bg-purple-500' },
+  { id: 'cyan', value: 'hsl(187, 72%, 53%)' },
+  { id: 'green', value: 'hsl(160, 84%, 39%)' },
+  { id: 'orange', value: 'hsl(25, 95%, 53%)' },
+  { id: 'blue', value: 'hsl(217, 91%, 60%)' },
+  { id: 'red', value: 'hsl(0, 84%, 60%)' },
+  { id: 'purple', value: 'hsl(271, 91%, 65%)' },
 ];
 
 export interface UserProfileData {
@@ -36,6 +36,7 @@ export interface UserProfileData {
   role: string;
   icon: string;
   accentColor: string;
+  password?: string;
 }
 
 interface Props {
@@ -51,6 +52,7 @@ export default function UserProfileModal({ open, onClose, users, onSave, editInd
   const [role, setRole] = useState('');
   const [icon, setIcon] = useState('user');
   const [accentColor, setAccentColor] = useState('cyan');
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
     if (editIndex !== null && users[editIndex]) {
@@ -59,18 +61,26 @@ export default function UserProfileModal({ open, onClose, users, onSave, editInd
       setRole(u.role);
       setIcon(u.icon || 'user');
       setAccentColor(u.accentColor || 'cyan');
+      setPassword(u.password || '');
     } else {
       setName('');
       setRole('');
       setIcon('user');
       setAccentColor('cyan');
+      setPassword('');
     }
   }, [editIndex, users, open]);
 
   const handleSave = () => {
     if (!name.trim()) return;
     const updated = [...users];
-    const profile: UserProfileData = { name: name.trim(), role: role.trim(), icon, accentColor };
+    const profile: UserProfileData = {
+      name: name.trim(),
+      role: role.trim(),
+      icon,
+      accentColor,
+      password: password.trim() || undefined,
+    };
     if (editIndex !== null) {
       updated[editIndex] = profile;
     } else {
@@ -103,6 +113,10 @@ export default function UserProfileModal({ open, onClose, users, onSave, editInd
           <div>
             <Label>Cargo / Função</Label>
             <Input value={role} onChange={e => setRole(e.target.value)} placeholder="Ex: Analista de Segurança" className="mt-1" />
+          </div>
+          <div>
+            <Label>Senha (opcional)</Label>
+            <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Deixe vazio para acesso livre" className="mt-1" />
           </div>
           <div>
             <Label className="mb-2 block">Ícone / Avatar</Label>
