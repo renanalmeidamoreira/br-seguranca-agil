@@ -1,0 +1,16 @@
+{
+  "name": "SYNAPSE - Plataforma de Inteligência Investigativa",
+  "short_name": "SYNAPSE",
+  "description": "Sistema de gestão de segurança offline-first",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0f1a",
+  "theme_color": "#22d3ee",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}

@@ -1,8 +1,10 @@
 import { useApp } from '@/contexts/AppContext';
 import { formatCurrency } from '@/lib/localDB';
 import KpiCard from '@/components/dashboard/KpiCard';
+import TrendKpiCard from '@/components/dashboard/TrendKpiCard';
 import DashboardCharts from '@/components/dashboard/DashboardCharts';
 import { ClipboardList, Clock, CheckCircle, TrendingDown, TrendingUp, Shield } from 'lucide-react';
+import { useMemo } from 'react';
 
 export default function DashboardPage() {
   const { cases } = useApp();
@@ -12,16 +14,59 @@ export default function DashboardPage() {
   const totalRecovered = cases.reduce((sum, c) => sum + (parseFloat(String(c.VALOR_RECUPERADO)) || 0), 0);
   const totalAvoided = cases.reduce((sum, c) => sum + (parseFloat(String(c.PERDA_EVITADA_ANUAL)) || 0), 0);
 
-  const unitsWithCases = cases.reduce((acc, c) => {
-    if (c.UNIDADE) acc[c.UNIDADE] = (acc[c.UNIDADE] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  const sortedUnits = Object.entries(unitsWithCases).sort(([, a], [, b]) => b - a);
+  // === NOVO: Performance Mensal e Eficiência ===
+  const { monthlyPerformance, efficiency, perfTrend, effTrend, perfTrendLabel, effTrendLabel } = useMemo(() => {
+    const now = new Date();
+    const monthBuckets: Record<string, { total: number; finished: number }> = {};
+
+    cases.forEach(c => {
+      if (!c.DATA) return;
+      const d = new Date(c.DATA + 'T00:00:00');
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthBuckets[key]) monthBuckets[key] = { total: 0, finished: 0 };
+      monthBuckets[key].total++;
+      if (c.STATUS === 'FINALIZADO') monthBuckets[key].finished++;
+    });
+
+    const sortedMonths = Object.keys(monthBuckets).sort();
+    const totalMonths = sortedMonths.length || 1;
+    const totalFinished = Object.values(monthBuckets).reduce((s, b) => s + b.finished, 0);
+    const avgPerMonth = totalFinished / totalMonths;
+
+    const effValues = sortedMonths.map(m => {
+      const b = monthBuckets[m];
+      return b.total > 0 ? (b.finished / b.total) * 100 : 0;
+    });
+    const avgEff = effValues.length > 0 ? effValues.reduce((a, b) => a + b, 0) / effValues.length : 0;
+
+    // Trend: compare last 2 months
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+
+    const curBucket = monthBuckets[currentMonth] || { total: 0, finished: 0 };
+    const prevBucket = monthBuckets[prevMonth] || { total: 0, finished: 0 };
+
+    const perfDiff = curBucket.finished - prevBucket.finished;
+    const curEff = curBucket.total > 0 ? (curBucket.finished / curBucket.total) * 100 : 0;
+    const prevEff = prevBucket.total > 0 ? (prevBucket.finished / prevBucket.total) * 100 : 0;
+    const effDiff = curEff - prevEff;
+
+    return {
+      monthlyPerformance: avgPerMonth.toFixed(1),
+      efficiency: avgEff.toFixed(1) + '%',
+      perfTrend: perfDiff > 0 ? 'up' as const : perfDiff < 0 ? 'down' as const : 'neutral' as const,
+      effTrend: effDiff > 0 ? 'up' as const : effDiff < 0 ? 'down' as const : 'neutral' as const,
+      perfTrendLabel: perfDiff !== 0 ? `${perfDiff > 0 ? '+' : ''}${perfDiff} vs mês anterior` : 'Estável',
+      effTrendLabel: effDiff !== 0 ? `${effDiff > 0 ? '+' : ''}${effDiff.toFixed(1)}% vs anterior` : 'Estável',
+    };
+  }, [cases]);
 
   return (
     <div>
       <h1 className="text-3xl font-bold text-primary mb-6">Dashboard Analítico de Segurança</h1>
 
+      {/* Linha 1: 4 KPIs principais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <KpiCard
           icon={<ClipboardList className="w-6 h-6" />}
@@ -47,6 +92,10 @@ export default function DashboardPage() {
           value={formatCurrency(totalLoss)}
           iconBgClass="bg-destructive/20 text-destructive"
         />
+      </div>
+
+      {/* Linha 2: Valores financeiros + KPIs de tendência */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <KpiCard
           icon={<TrendingUp className="w-6 h-6" />}
           label="Total Recuperado"
@@ -59,16 +108,20 @@ export default function DashboardPage() {
           value={formatCurrency(totalAvoided)}
           iconBgClass="bg-info/20 text-info"
         />
-
-        {/* Units Card */}
-        <div className="bg-card p-5 rounded-lg border border-border col-span-1 sm:col-span-2">
-          <h3 className="font-semibold text-lg mb-2 text-primary">Casos por Unidade</h3>
-          <ul className="space-y-1 text-xs max-h-24 overflow-y-auto synapse-scrollbar">
-            {sortedUnits.length > 0 ? sortedUnits.map(([name, count]) => (
-              <li key={name}>{name} <span className="text-primary font-bold">({count})</span></li>
-            )) : <li className="text-muted-foreground">Nenhum caso.</li>}
-          </ul>
-        </div>
+        {/* === NOVO: Performance Mensal === */}
+        <TrendKpiCard
+          label="Performance Mensal"
+          value={monthlyPerformance}
+          trend={perfTrend}
+          trendLabel={perfTrendLabel}
+        />
+        {/* === NOVO: Eficiência === */}
+        <TrendKpiCard
+          label="Eficiência"
+          value={efficiency}
+          trend={effTrend}
+          trendLabel={effTrendLabel}
+        />
       </div>
 
       <DashboardCharts cases={cases} />

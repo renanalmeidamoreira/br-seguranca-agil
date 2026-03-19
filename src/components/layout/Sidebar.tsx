@@ -1,9 +1,14 @@
 import { useApp } from '@/contexts/AppContext';
-import { USERS } from '@/lib/localDB';
+import { USERS, localDB } from '@/lib/localDB';
 import {
   BarChart3, FolderOpen, CheckSquare, Shield, Search,
-  GitBranch, History, CalendarDays
+  GitBranch, History, CalendarDays, Settings,
+  User, UserCog, HardHat, Briefcase, Eye, Lock, Wrench, Truck, HeartPulse, Megaphone
 } from 'lucide-react';
+import { useState } from 'react';
+import UserProfileModal, { type UserProfileData } from '@/components/users/UserProfileModal';
+import InstallPWA from '@/components/pwa/InstallPWA';
+import type { LucideIcon } from 'lucide-react';
 
 const navItems = [
   { id: 'cronograma', label: 'Cronograma Anual', icon: CalendarDays },
@@ -16,8 +21,51 @@ const navItems = [
   { id: 'logs', label: 'Logs de Atividade', icon: History },
 ];
 
+// === NOVO: Mapa de ícones por ID ===
+const ICON_MAP: Record<string, LucideIcon> = {
+  'user': User,
+  'user-cog': UserCog,
+  'shield': Shield,
+  'hard-hat': HardHat,
+  'briefcase': Briefcase,
+  'eye': Eye,
+  'lock': Lock,
+  'wrench': Wrench,
+  'truck': Truck,
+  'heart-pulse': HeartPulse,
+};
+
+const ACCENT_COLOR_MAP: Record<string, string> = {
+  cyan: 'hsl(187, 72%, 53%)',
+  green: 'hsl(160, 84%, 39%)',
+  orange: 'hsl(25, 95%, 53%)',
+  blue: 'hsl(217, 91%, 60%)',
+  red: 'hsl(0, 84%, 60%)',
+  purple: 'hsl(271, 91%, 65%)',
+};
+
 export default function Sidebar() {
   const { activePage, setActivePage, currentUser, currentUserIndex, switchUser } = useApp();
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+
+  // Build users with accent colors
+  const users: UserProfileData[] = USERS.map(u => ({
+    ...u,
+    accentColor: (u as any).accentColor || 'cyan',
+  }));
+
+  const handleSaveUsers = (updated: UserProfileData[]) => {
+    // Update the USERS array in place (module-level)
+    USERS.length = 0;
+    updated.forEach(u => USERS.push({ name: u.name, role: u.role, icon: u.icon, ...(u as any) }));
+    localDB.save('synapse_offline_userProfiles', updated);
+    // If current index is out of bounds, reset
+    if (currentUserIndex >= USERS.length) switchUser(0);
+  };
+
+  const UserIcon = ICON_MAP[currentUser.icon] || User;
+  const accentColor = ACCENT_COLOR_MAP[(currentUser as any).accentColor || 'cyan'] || ACCENT_COLOR_MAP.cyan;
 
   return (
     <aside className="w-64 flex flex-col bg-card border-r border-border h-screen">
@@ -46,16 +94,22 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-border">
-        <div className="flex items-center mb-4">
-          <div className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary text-primary text-lg font-bold">
-            {currentUser.name.charAt(0)}
+      <div className="p-4 border-t border-border space-y-3">
+        {/* === NOVO: Cartão de perfil com ícone dinâmico === */}
+        <div className="flex items-center">
+          <div
+            className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary"
+            style={{ color: accentColor }}
+          >
+            <UserIcon className="w-5 h-5" />
           </div>
-          <div className="ml-3">
-            <p className="text-sm font-medium">{currentUser.name}</p>
-            <p className="text-xs text-muted-foreground">{currentUser.role}</p>
+          <div className="ml-3 flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{currentUser.name}</p>
+            <p className="text-xs text-muted-foreground truncate">{currentUser.role}</p>
           </div>
         </div>
+
+        {/* Trocar Usuário */}
         <div>
           <label className="block text-xs text-muted-foreground mb-1">Trocar Usuário</label>
           <select
@@ -68,6 +122,26 @@ export default function Sidebar() {
             ))}
           </select>
         </div>
+
+        {/* === NOVO: Botão Gerenciar Usuários === */}
+        <button
+          onClick={() => { setEditIndex(currentUserIndex); setProfileModalOpen(true); }}
+          className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5 rounded-md hover:bg-secondary/50"
+        >
+          <Settings className="w-3 h-3" />
+          Gerenciar Perfil
+        </button>
+
+        {/* === NOVO: Botão PWA Install === */}
+        <InstallPWA />
+
+        <UserProfileModal
+          open={profileModalOpen}
+          onClose={() => setProfileModalOpen(false)}
+          users={users}
+          onSave={handleSaveUsers}
+          editIndex={editIndex}
+        />
       </div>
     </aside>
   );
