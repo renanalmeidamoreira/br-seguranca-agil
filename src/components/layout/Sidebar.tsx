@@ -3,10 +3,11 @@ import { USERS, localDB } from '@/lib/localDB';
 import {
   BarChart3, FolderOpen, CheckSquare, Shield, Search,
   GitBranch, History, CalendarDays, Settings,
-  User, UserCog, HardHat, Briefcase, Eye, Lock, Wrench, Truck, HeartPulse, Megaphone
+  User, UserCog, HardHat, Briefcase, Eye, Lock, Wrench, Truck, HeartPulse
 } from 'lucide-react';
 import { useState } from 'react';
 import UserProfileModal, { type UserProfileData } from '@/components/users/UserProfileModal';
+import PasswordSwitchModal from '@/components/users/PasswordSwitchModal';
 import InstallPWA from '@/components/pwa/InstallPWA';
 import type { LucideIcon } from 'lucide-react';
 
@@ -21,7 +22,6 @@ const navItems = [
   { id: 'logs', label: 'Logs de Atividade', icon: History },
 ];
 
-// === NOVO: Mapa de ícones por ID ===
 const ICON_MAP: Record<string, LucideIcon> = {
   'user': User,
   'user-cog': UserCog,
@@ -48,20 +48,45 @@ export default function Sidebar() {
   const { activePage, setActivePage, currentUser, currentUserIndex, switchUser } = useApp();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
+  // === NOVO: Estado para modal de senha ===
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [pendingSwitchIndex, setPendingSwitchIndex] = useState<number | null>(null);
 
-  // Build users with accent colors
   const users: UserProfileData[] = USERS.map(u => ({
     ...u,
     accentColor: (u as any).accentColor || 'cyan',
+    password: (u as any).password,
   }));
 
   const handleSaveUsers = (updated: UserProfileData[]) => {
-    // Update the USERS array in place (module-level)
     USERS.length = 0;
     updated.forEach(u => USERS.push({ name: u.name, role: u.role, icon: u.icon, ...(u as any) }));
     localDB.save('synapse_offline_userProfiles', updated);
-    // If current index is out of bounds, reset
     if (currentUserIndex >= USERS.length) switchUser(0);
+  };
+
+  // === NOVO: Troca de usuário com verificação de senha ===
+  const handleUserSwitch = (newIndex: number) => {
+    if (newIndex === currentUserIndex) return;
+    const targetUser = users[newIndex];
+    if (targetUser?.password) {
+      setPendingSwitchIndex(newIndex);
+      setPasswordModalOpen(true);
+    } else {
+      switchUser(newIndex);
+    }
+  };
+
+  const handlePasswordConfirm = (password: string): boolean => {
+    if (pendingSwitchIndex === null) return false;
+    const targetUser = users[pendingSwitchIndex];
+    if (targetUser?.password === password) {
+      switchUser(pendingSwitchIndex);
+      setPasswordModalOpen(false);
+      setPendingSwitchIndex(null);
+      return true;
+    }
+    return false;
   };
 
   const UserIcon = ICON_MAP[currentUser.icon] || User;
@@ -95,7 +120,6 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-border space-y-3">
-        {/* === NOVO: Cartão de perfil com ícone dinâmico === */}
         <div className="flex items-center">
           <div
             className="h-10 w-10 rounded-full flex items-center justify-center bg-secondary"
@@ -109,12 +133,11 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Trocar Usuário */}
         <div>
           <label className="block text-xs text-muted-foreground mb-1">Trocar Usuário</label>
           <select
             value={currentUserIndex}
-            onChange={e => switchUser(Number(e.target.value))}
+            onChange={e => handleUserSwitch(Number(e.target.value))}
             className="w-full text-sm rounded-lg px-2 py-1 bg-secondary border-border border"
           >
             {USERS.map((user, i) => (
@@ -123,7 +146,6 @@ export default function Sidebar() {
           </select>
         </div>
 
-        {/* === NOVO: Botão Gerenciar Usuários === */}
         <button
           onClick={() => { setEditIndex(currentUserIndex); setProfileModalOpen(true); }}
           className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5 rounded-md hover:bg-secondary/50"
@@ -132,7 +154,6 @@ export default function Sidebar() {
           Gerenciar Perfil
         </button>
 
-        {/* === NOVO: Botão PWA Install === */}
         <InstallPWA />
 
         <UserProfileModal
@@ -141,6 +162,14 @@ export default function Sidebar() {
           users={users}
           onSave={handleSaveUsers}
           editIndex={editIndex}
+        />
+
+        {/* === NOVO: Modal de senha para troca === */}
+        <PasswordSwitchModal
+          open={passwordModalOpen}
+          userName={pendingSwitchIndex !== null ? users[pendingSwitchIndex]?.name || '' : ''}
+          onConfirm={handlePasswordConfirm}
+          onClose={() => { setPasswordModalOpen(false); setPendingSwitchIndex(null); }}
         />
       </div>
     </aside>
