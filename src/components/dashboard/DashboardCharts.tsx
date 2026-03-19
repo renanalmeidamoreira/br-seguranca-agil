@@ -117,9 +117,17 @@ export default function DashboardCharts({ cases }: { cases: CaseData[] }) {
     },
   };
 
+  // === CORREÇÃO 1: Dados de Casos por Unidade ===
+  const unitData = useMemo(() => countBy(cases, 'UNIDADE'), [cases]);
+  const sortedUnits = useMemo(() =>
+    Object.entries(unitData).sort((a, b) => b[1] - a[1]),
+    [unitData]
+  );
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* === CORREÇÃO 1: Três cartões lado a lado === */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-card p-6 rounded-lg h-96">
           <h2 className="text-lg font-semibold text-primary mb-4">Casos por Gravidade</h2>
           <div className="h-[calc(100%-2rem)]">
@@ -151,6 +159,30 @@ export default function DashboardCharts({ cases }: { cases: CaseData[] }) {
               options={pieDoughnutOpts}
             />
           </div>
+        </div>
+        {/* === CORREÇÃO 1: Casos por Unidade (lista) === */}
+        <div className="bg-card p-6 rounded-lg h-96 overflow-y-auto synapse-scrollbar">
+          <h2 className="text-lg font-semibold text-primary mb-4">Casos por Unidade</h2>
+          {sortedUnits.length === 0 ? (
+            <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+          ) : (
+            <div className="space-y-2">
+              {sortedUnits.map(([unit, count]) => (
+                <div key={unit} className="flex items-center justify-between">
+                  <span className="text-sm text-foreground truncate mr-2">{unit}</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="w-24 h-2 rounded-full bg-secondary overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${Math.min((count / (sortedUnits[0]?.[1] || 1)) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-semibold text-primary w-6 text-right">{count}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
