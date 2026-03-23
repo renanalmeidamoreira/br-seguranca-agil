@@ -165,8 +165,8 @@ export default function SyncStatusBar() {
         )}
 
         {/* Last result */}
-        {lastResult && (
-          <div className="text-muted-foreground">{lastResult}</div>
+        {(lastResult || importResult) && (
+          <div className="text-muted-foreground">{importResult || lastResult}</div>
         )}
       </div>
 
