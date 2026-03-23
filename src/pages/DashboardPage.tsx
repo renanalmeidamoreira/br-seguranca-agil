@@ -126,6 +126,9 @@ export default function DashboardPage() {
       </div>
 
       <DashboardCharts cases={cases} />
+
+      {/* === MAPA DE CALOR === */}
+      <HeatmapSection cases={cases} />
     </div>
   );
 }

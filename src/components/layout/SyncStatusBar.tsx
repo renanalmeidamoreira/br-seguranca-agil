@@ -204,6 +204,17 @@ export default function SyncStatusBar() {
           Backup JSON
         </Button>
 
+        {/* === NOVA FUNCIONALIDADE: IMPORT BACKUP === */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleImportBackup}
+          className="h-7 text-xs"
+        >
+          <Upload className="w-3.5 h-3.5 mr-1" />
+          Importar Backup
+        </Button>
+
         {user && (
           <Button
             variant="ghost"
