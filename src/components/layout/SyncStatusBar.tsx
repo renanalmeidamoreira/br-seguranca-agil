@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { syncAll, getSyncInfo, markAllLocalForSync } from '@/lib/syncService';
-import { Wifi, WifiOff, RefreshCw, Cloud, Download, LogOut } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw, Cloud, Download, Upload, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatDateTime } from '@/lib/localDB';
 
