@@ -62,10 +62,11 @@ export default function SyncStatusBar() {
     await handleSync();
   }, [handleSync]);
 
+  const BACKUP_KEYS = ['synapse_offline_occurrences', 'synapse_offline_checklists', 'synapse_offline_risks', 'synapse_offline_schedules', 'synapse_offline_activityLogs'];
+
   const handleExportBackup = () => {
-    const keys = ['synapse_offline_occurrences', 'synapse_offline_checklists', 'synapse_offline_risks', 'synapse_offline_schedules', 'synapse_offline_activityLogs'];
     const backup: Record<string, any> = {};
-    keys.forEach(k => {
+    BACKUP_KEYS.forEach(k => {
       try { backup[k] = JSON.parse(localStorage.getItem(k) || '[]'); } catch { backup[k] = []; }
     });
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -75,6 +76,65 @@ export default function SyncStatusBar() {
     a.download = `synapse-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // === NOVA FUNCIONALIDADE: IMPORT BACKUP ===
+  const [importResult, setImportResult] = useState('');
+
+  const handleImportBackup = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        let totalImported = 0;
+
+        BACKUP_KEYS.forEach(key => {
+          if (!data[key] || !Array.isArray(data[key])) return;
+          const existing = (() => { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; } })();
+          const existingIds = new Set(existing.map((item: any) => item.id));
+
+          const newItems = data[key].filter((item: any) => !existingIds.has(item.id));
+          // Regenerate displayIds for imported items to avoid conflicts
+          newItems.forEach((item: any) => {
+            if (item.displayId) {
+              const parts = item.displayId.split('-');
+              if (parts.length >= 2) {
+                const prefix = parts[0];
+                const year = new Date().getFullYear();
+                const allItems = [...existing, ...newItems.filter((n: any) => n !== item)];
+                const maxSeq = allItems.reduce((max: number, i: any) => {
+                  if (!i.displayId) return max;
+                  const p = i.displayId.split('-');
+                  if (p[0] === prefix && p[1] === String(year)) {
+                    return Math.max(max, parseInt(p[2] || '0', 10) || 0);
+                  }
+                  return max;
+                }, 0);
+                item.displayId = `${prefix}-${year}-${String(maxSeq + 1).padStart(4, '0')}`;
+              }
+            }
+          });
+
+          const merged = [...existing, ...newItems];
+          localStorage.setItem(key, JSON.stringify(merged));
+          totalImported += newItems.length;
+        });
+
+        setImportResult(`✅ ${totalImported} registros importados`);
+        setTimeout(() => setImportResult(''), 4000);
+        // Refresh the app
+        window.location.reload();
+      } catch (err) {
+        setImportResult('❌ Erro ao importar arquivo');
+        setTimeout(() => setImportResult(''), 4000);
+      }
+    };
+    input.click();
   };
 
   return (
