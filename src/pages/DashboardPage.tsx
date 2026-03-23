@@ -3,6 +3,7 @@ import { formatCurrency } from '@/lib/localDB';
 import KpiCard from '@/components/dashboard/KpiCard';
 import TrendKpiCard from '@/components/dashboard/TrendKpiCard';
 import DashboardCharts from '@/components/dashboard/DashboardCharts';
+import HeatmapSection from '@/components/dashboard/HeatmapSection';
 import { ClipboardList, Clock, CheckCircle, TrendingDown, TrendingUp, Shield } from 'lucide-react';
 import { useMemo } from 'react';
 
@@ -125,6 +126,9 @@ export default function DashboardPage() {
       </div>
 
       <DashboardCharts cases={cases} />
+
+      {/* === MAPA DE CALOR === */}
+      <HeatmapSection cases={cases} />
     </div>
   );
 }
