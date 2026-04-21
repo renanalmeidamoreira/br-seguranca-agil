@@ -232,7 +232,7 @@ export default function CasesPage() {
                     <button onClick={() => handleEdit(item)} className="text-warning hover:opacity-80" title="Editar">
                       <Pencil className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(item.id)} className="text-destructive hover:opacity-80" title="Excluir">
+                    <button onClick={() => handleDelete(item)} className="text-destructive hover:opacity-80" title="Excluir">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -264,6 +264,14 @@ export default function CasesPage() {
       {viewingCase && (
         <CaseDetailsModal caseData={viewingCase} onClose={() => setViewingCase(null)} />
       )}
+
+      {/* === NOVA FUNCIONALIDADE: Confirmação de exclusão === */}
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        itemLabel={deleteTarget ? `o caso ${deleteTarget.displayId}` : 'este caso'}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }
