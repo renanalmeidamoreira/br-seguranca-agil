@@ -250,7 +250,7 @@ export default function RiskPage() {
                     <td className="p-3">{risk.status}</td>
                     <td className="p-3">
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(risk.id)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(risk)}>
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
                       </div>
@@ -272,6 +272,14 @@ export default function RiskPage() {
         onOpenChange={() => {}}
         plant=""
         risks={[]}
+      />
+
+      {/* === NOVA FUNCIONALIDADE: Confirmação de exclusão === */}
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        itemLabel={deleteTarget ? `o risco ${deleteTarget.displayId}` : 'este risco'}
+        onConfirm={confirmDelete}
       />
     </div>
   );
