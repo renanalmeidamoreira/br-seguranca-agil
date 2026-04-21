@@ -86,6 +86,30 @@
   }
 }
 
+/* === LEAFLET MAP COM Z-INDEX INFERIOR === */
+.leaflet-container,
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 10 !important;
+}
+.leaflet-control {
+  z-index: 11 !important;
+}
+
+/* === CORREÇÃO DE Z-INDEX: CARDS LATERAIS ACIMA DOS MAPAS === */
+.sidebar-cards,
+[data-sidebar-card] {
+  position: relative;
+  z-index: 30;
+}
+
+/* Modais e overlays do Radix sempre acima */
+[data-radix-popper-content-wrapper],
+[role="dialog"] {
+  z-index: 50 !important;
+}
+
 @keyframes slideIn {
   from {
     opacity: 0;
