@@ -1,8 +1,9 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { formatCurrency, formatDate, formatDateTime, generateSequentialDisplayId, CaseData } from '@/lib/localDB';
 import CaseForm from '@/components/cases/CaseForm';
 import CaseDetailsModal from '@/components/cases/CaseDetailsModal';
+import { ConfirmDeleteDialog } from '@/components/ui/confirm-dialog';
 import { Plus, FileSpreadsheet, Eye, Pencil, Trash2, ArrowUpDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -27,7 +28,7 @@ function getStatusBadge(status: string) {
 }
 
 export default function CasesPage() {
-  const { cases, deleteCase, showAlert } = useApp();
+  const { cases, deleteCase, showAlert, pendingItem, clearPendingItem } = useApp();
   const [showForm, setShowForm] = useState(false);
   const [editingCase, setEditingCase] = useState<CaseData | null>(null);
   const [viewingCase, setViewingCase] = useState<CaseData | null>(null);
@@ -37,7 +38,18 @@ export default function CasesPage() {
   const [sortColumn, setSortColumn] = useState('displayId');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
+  // === NOVA FUNCIONALIDADE: Confirmação de exclusão ===
+  const [deleteTarget, setDeleteTarget] = useState<CaseData | null>(null);
   const itemsPerPage = 15;
+
+  // === NOVA FUNCIONALIDADE: Abrir caso vindo da Busca Integrada ===
+  useEffect(() => {
+    if (pendingItem && pendingItem.module === 'casos') {
+      const found = cases.find(c => c.displayId === pendingItem.id || c.id === pendingItem.id);
+      if (found) setViewingCase(found);
+      clearPendingItem();
+    }
+  }, [pendingItem, cases, clearPendingItem]);
 
   const filtered = useMemo(() => {
     let result = cases.filter(item => {
@@ -77,9 +89,15 @@ export default function CasesPage() {
     }
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este caso?')) {
-      deleteCase(id);
+  const handleDelete = (caseItem: CaseData) => {
+    // === NOVA FUNCIONALIDADE: Modal de confirmação ao invés de window.confirm ===
+    setDeleteTarget(caseItem);
+  };
+
+  const confirmDelete = () => {
+    if (deleteTarget) {
+      deleteCase(deleteTarget.id);
+      setDeleteTarget(null);
     }
   };
 
@@ -214,7 +232,7 @@ export default function CasesPage() {
                     <button onClick={() => handleEdit(item)} className="text-warning hover:opacity-80" title="Editar">
                       <Pencil className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(item.id)} className="text-destructive hover:opacity-80" title="Excluir">
+                    <button onClick={() => handleDelete(item)} className="text-destructive hover:opacity-80" title="Excluir">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -246,6 +264,14 @@ export default function CasesPage() {
       {viewingCase && (
         <CaseDetailsModal caseData={viewingCase} onClose={() => setViewingCase(null)} />
       )}
+
+      {/* === NOVA FUNCIONALIDADE: Confirmação de exclusão === */}
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        itemLabel={deleteTarget ? `o caso ${deleteTarget.displayId}` : 'este caso'}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

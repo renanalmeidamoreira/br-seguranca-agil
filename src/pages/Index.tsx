@@ -1,4 +1,5 @@
 import { AppProvider, useApp } from '@/contexts/AppContext';
+import { GlobalFiltersProvider } from '@/contexts/GlobalFiltersContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from '@/components/layout/Sidebar';
 import AlertContainer from '@/components/layout/AlertContainer';
@@ -57,7 +58,9 @@ function AuthenticatedApp() {
 
   return (
     <AppProvider>
-      <MainContent />
+      <GlobalFiltersProvider>
+        <MainContent />
+      </GlobalFiltersProvider>
     </AppProvider>
   );
 }

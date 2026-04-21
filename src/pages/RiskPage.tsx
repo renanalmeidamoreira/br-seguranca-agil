@@ -5,6 +5,7 @@ import { markForSync } from '@/lib/syncService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ConfirmDeleteDialog } from '@/components/ui/confirm-dialog';
 import { Shield, Plus, Trash2, MapPin, Eye, X } from 'lucide-react';
 import RiskPlantModal from '@/components/risk/RiskPlantModal';
 import RiskForm from '@/components/risk/RiskForm';
@@ -60,6 +61,8 @@ export default function RiskPage() {
   const [showForm, setShowForm] = useState(false);
   const [selectedPlant, setSelectedPlant] = useState<string | null>(null);
   const [yearFilter, setYearFilter] = useState<string>('');
+  // === NOVA FUNCIONALIDADE: Confirmação de exclusão de risco ===
+  const [deleteTarget, setDeleteTarget] = useState<RiskAssessment | null>(null);
 
   const refresh = () => setRisks(localDB.load<RiskAssessment>(DB_KEYS.risks));
 
@@ -83,9 +86,13 @@ export default function RiskPage() {
     setShowForm(false); refresh();
   };
 
-  const handleDelete = (id: string) => {
-    localDB.delete(DB_KEYS.risks, id); refresh();
+  const handleDelete = (risk: RiskAssessment) => setDeleteTarget(risk);
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    localDB.delete(DB_KEYS.risks, deleteTarget.id);
+    refresh();
     showAlert('Risco excluído.', 'warning');
+    setDeleteTarget(null);
   };
 
   // Year options
@@ -243,7 +250,7 @@ export default function RiskPage() {
                     <td className="p-3">{risk.status}</td>
                     <td className="p-3">
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(risk.id)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(risk)}>
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
                       </div>
@@ -265,6 +272,14 @@ export default function RiskPage() {
         onOpenChange={() => {}}
         plant=""
         risks={[]}
+      />
+
+      {/* === NOVA FUNCIONALIDADE: Confirmação de exclusão === */}
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        itemLabel={deleteTarget ? `o risco ${deleteTarget.displayId}` : 'este risco'}
+        onConfirm={confirmDelete}
       />
     </div>
   );
