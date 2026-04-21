@@ -22,6 +22,10 @@ interface AppContextType {
   log: (action: string) => void;
   activePage: string;
   setActivePage: (page: string) => void;
+  // === NOVA FUNCIONALIDADE: Busca → navegar e abrir item ===
+  pendingItem: { module: string; id: string } | null;
+  openItem: (module: string, id: string) => void;
+  clearPendingItem: () => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -31,6 +35,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [cases, setCases] = useState<CaseData[]>([]);
   const [alerts, setAlerts] = useState<AlertMessage[]>([]);
   const [activePage, setActivePage] = useState('dashboard');
+  const [pendingItem, setPendingItem] = useState<{ module: string; id: string } | null>(null);
 
   const currentUser = USERS[currentUserIndex];
 
@@ -88,12 +93,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cases, refreshCases, log, showAlert]);
 
+  // === NOVA FUNCIONALIDADE: Busca → abrir item específico em outro módulo ===
+  const openItem = useCallback((module: string, id: string) => {
+    setPendingItem({ module, id });
+    setActivePage(module);
+  }, []);
+  const clearPendingItem = useCallback(() => setPendingItem(null), []);
+
   return (
     <AppContext.Provider value={{
       currentUser, currentUserIndex, switchUser,
       cases, refreshCases, addCase, updateCase, deleteCase,
       alerts, showAlert, log,
       activePage, setActivePage,
+      pendingItem, openItem, clearPendingItem,
     }}>
       {children}
     </AppContext.Provider>
