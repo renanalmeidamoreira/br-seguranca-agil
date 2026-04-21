@@ -78,6 +78,52 @@ export default function SyncStatusBar() {
     URL.revokeObjectURL(url);
   };
 
+  // Converte data br "26/06/2024" -> "2024-06-26". Mantém ISO se já estiver ISO.
+  const toIsoDate = (s: string): string => {
+    if (!s) return '';
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+    return s;
+  };
+
+  // Mapeia um caso do schema externo (backup_synapse_completo.json) para o CaseData interno
+  const mapExternalCase = (c: any, idx: number): any => {
+    const fin = c.financeiro || {};
+    const trat = c.tratativas || {};
+    const gut = c.gut || {};
+    return {
+      id: c.id || crypto.randomUUID(),
+      displayId: c.id || `CASO-${new Date().getFullYear()}-${String(idx + 1).padStart(4, '0')}`,
+      DATA: toIsoDate(c.data || ''),
+      LOCAL: c.local || '',
+      UNIDADE: c.unidade || '',
+      SETOR: c.setor || '',
+      'CLIENTE_DA_OCORRÊNCIA': c.cliente || '',
+      'DESCRIÇÃO_DA_OCORRÊNCIA': c.descricao || '',
+      'TIPO_DE_OCORRÊNCIA': c.tipo_ocorrencia || '',
+      'TIPO_DE_OPERAÇÃO': c.tipo_operacao || '',
+      GRAVIDADE: gut.gravidade ? String(gut.gravidade) : '',
+      case_g: Number(gut.gravidade) || 0,
+      case_u: Number(gut.urgencia) || 0,
+      case_t: Number(gut.tendencia) || 0,
+      ENVOLVIDOS: c.envolvidos_medidas
+        ? [{ name: String(c.envolvidos_medidas), measure: '' }]
+        : [],
+      'RCA_DA_OCORRÊNCIA': trat.rca && trat.rca !== 'nan' ? trat.rca : '',
+      SINTESE: c.sintese || '',
+      'AÇÃO_TOMADA': trat.acao || '',
+      STATUS: c.status || 'EM ABERTO',
+      VALOR_PERDA: Number(fin.perda) || 0,
+      VALOR_RECUPERADO: Number(fin.recuperado) || 0,
+      VALOR_FRAUDE_MENSAL: Number(fin.fraude_mensal) || 0,
+      PERDA_EVITADA_ANUAL: Number(fin.perda_evitada_anual) || 0,
+      INICIO_TRATATIVAS: toIsoDate(trat.inicio || ''),
+      ENCERRAMENTO: toIsoDate(trat.encerramento || ''),
+      TEMPO_DE_TRATATIVA: trat.tempo || '',
+    };
+  };
+
   // === NOVA FUNCIONALIDADE: IMPORT BACKUP ===
   const [importResult, setImportResult] = useState('');
 
@@ -93,13 +139,24 @@ export default function SyncStatusBar() {
         const data = JSON.parse(text);
         let totalImported = 0;
 
+        // === IMPORTAÇÃO E EXIBIÇÃO DOS CASOS DO JSON ===
+        // Detecta schema externo: { cases: [...] } e converte para o formato interno
+        if (Array.isArray(data.cases)) {
+          const key = 'synapse_offline_occurrences';
+          const existing = (() => { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; } })();
+          const existingIds = new Set(existing.map((item: any) => item.id));
+          const mapped = data.cases.map(mapExternalCase).filter((c: any) => !existingIds.has(c.id));
+          const merged = [...existing, ...mapped];
+          localStorage.setItem(key, JSON.stringify(merged));
+          totalImported += mapped.length;
+        }
+
         BACKUP_KEYS.forEach(key => {
           if (!data[key] || !Array.isArray(data[key])) return;
           const existing = (() => { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; } })();
           const existingIds = new Set(existing.map((item: any) => item.id));
 
           const newItems = data[key].filter((item: any) => !existingIds.has(item.id));
-          // Regenerate displayIds for imported items to avoid conflicts
           newItems.forEach((item: any) => {
             if (item.displayId) {
               const parts = item.displayId.split('-');
@@ -127,9 +184,9 @@ export default function SyncStatusBar() {
 
         setImportResult(`✅ ${totalImported} registros importados`);
         setTimeout(() => setImportResult(''), 4000);
-        // Refresh the app
         window.location.reload();
       } catch (err) {
+        console.error(err);
         setImportResult('❌ Erro ao importar arquivo');
         setTimeout(() => setImportResult(''), 4000);
       }
