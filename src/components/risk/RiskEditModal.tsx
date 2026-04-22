@@ -36,6 +36,9 @@ export default function RiskEditModal({ open, onOpenChange, risk, existingPlants
   // Sincroniza o estado quando o risco selecionado mudar
   useEffect(() => { setForm(risk); }, [risk]);
 
+  // Coordenadas resolvidas a partir do nome da planta (auto-preenchidas)
+  const coords = useMemo(() => form ? findCoordsLocal(form.plant) || null : null, [form?.plant]);
+
   if (!form) return null;
 
   const set = <K extends keyof RiskAssessment>(key: K, value: RiskAssessment[K]) =>
@@ -43,9 +46,6 @@ export default function RiskEditModal({ open, onOpenChange, risk, existingPlants
 
   const score = (form.g || 0) * (form.u || 0) * (form.t || 0);
   const { priority, level } = calcPriority(score);
-
-  // Coordenadas resolvidas a partir do nome da planta (auto-preenchidas)
-  const coords = useMemo(() => findCoordsLocal(form.plant) || null, [form.plant]);
 
   const handleSave = () => {
     if (!form.plant.trim() || !form.fact.trim()) return;
@@ -73,8 +73,8 @@ export default function RiskEditModal({ open, onOpenChange, risk, existingPlants
           {/* Planta com autocomplete de cidade */}
           <div className="md:col-span-2">
             <label className="text-sm text-muted-foreground flex items-center gap-1">
-              Planta / Local
-              <Info className="w-3 h-3" titleof="Cidade que será plotada no mapa de calor" />
+              <span title="Cidade que será plotada no mapa de calor">Planta / Local</span>
+              <Info className="w-3 h-3" />
             </label>
             <CityAutocomplete
               value={form.plant}
