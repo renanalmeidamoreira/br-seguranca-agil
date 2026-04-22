@@ -6,13 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-dialog';
-import { Shield, Plus, Trash2, MapPin, Eye, X, FileSpreadsheet } from 'lucide-react';
+import { Shield, Plus, Trash2, MapPin, Eye, X, FileSpreadsheet, Pencil } from 'lucide-react';
 // === NOVA FUNCIONALIDADE: Exportação para Excel ===
 import { exportRowsToExcel } from '@/lib/exportExcel';
 import RiskPlantModal from '@/components/risk/RiskPlantModal';
 import RiskForm from '@/components/risk/RiskForm';
 // === NOVA FUNCIONALIDADE: Mini-mapa nos cartões de planta ===
 import PlantMiniMap from '@/components/risk/PlantMiniMap';
+// === NOVA FUNCIONALIDADE: Modal de edição dinâmica de riscos ===
+import RiskEditModal from '@/components/risk/RiskEditModal';
 
 export interface RiskAssessment {
   id: string;
@@ -67,8 +69,20 @@ export default function RiskPage() {
   const [yearFilter, setYearFilter] = useState<string>('');
   // === NOVA FUNCIONALIDADE: Confirmação de exclusão de risco ===
   const [deleteTarget, setDeleteTarget] = useState<RiskAssessment | null>(null);
+  // === NOVA FUNCIONALIDADE: Edição dinâmica de risco ===
+  const [editTarget, setEditTarget] = useState<RiskAssessment | null>(null);
 
   const refresh = () => setRisks(localDB.load<RiskAssessment>(DB_KEYS.risks));
+
+  // === NOVA FUNCIONALIDADE: Salvar edição com recálculo automático e refresh do mapa ===
+  const handleUpdate = (updated: RiskAssessment) => {
+    localDB.update(DB_KEYS.risks, updated);
+    markForSync(DB_KEYS.risks, updated.id);
+    log(`Atualizou risco: ${updated.displayId}`);
+    showAlert('Risco atualizado com sucesso!', 'success');
+    setEditTarget(null);
+    refresh();
+  };
 
   const handleCreate = (form: any) => {
     const all = localDB.load<RiskAssessment>(DB_KEYS.risks);
