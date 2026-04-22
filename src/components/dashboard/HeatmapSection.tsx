@@ -2,7 +2,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { MapContainer, TileLayer, useMap, CircleMarker, Tooltip } from 'react-leaflet';
 import type { CaseData } from '@/lib/localDB';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, RefreshCw } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 // === NOVA FUNCIONALIDADE: Base compartilhada de cidades (também usada no autocomplete) ===
 import { COORD_MAP, MG_CENTER, normalizeCity, findCoordsLocal } from '@/lib/cityCoords';
