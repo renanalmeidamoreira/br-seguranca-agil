@@ -248,7 +248,7 @@ export default function HeatmapSection({ cases }: Props) {
       </div>
       <div className="rounded-lg overflow-hidden border border-border" style={{ height: 500, position: 'relative', zIndex: 1 }}>
         <MapContainer
-          key={mapTheme}
+          key={`${mapTheme}-${refreshKey}`}
           center={[-18, -44]}
           zoom={5}
           style={{ height: '100%', width: '100%' }}
