@@ -9,6 +9,8 @@ import { ConfirmDeleteDialog } from '@/components/ui/confirm-dialog';
 import { Shield, Plus, Trash2, MapPin, Eye, X } from 'lucide-react';
 import RiskPlantModal from '@/components/risk/RiskPlantModal';
 import RiskForm from '@/components/risk/RiskForm';
+// === NOVA FUNCIONALIDADE: Mini-mapa nos cartões de planta ===
+import PlantMiniMap from '@/components/risk/PlantMiniMap';
 
 export interface RiskAssessment {
   id: string;
@@ -178,6 +180,10 @@ export default function RiskPage() {
             {plantGroups.map(([plant, plantRisks]) => {
               const level = overallLevel(plantRisks);
               const isActive = selectedPlant === plant;
+              // === Cálculo do GUT médio (G + U + T) por planta ===
+              const avgGut = plantRisks.length > 0
+                ? plantRisks.reduce((s, r) => s + ((r.g || 0) + (r.u || 0) + (r.t || 0)) / 3, 0) / plantRisks.length
+                : 0;
               return (
                 <Card key={plant}
                   className={`cursor-pointer transition-all hover:shadow-lg border-l-4 ${
@@ -186,15 +192,22 @@ export default function RiskPage() {
                     level === 'Moderado' ? 'border-l-info' : 'border-l-success'
                   } ${isActive ? 'ring-2 ring-primary' : ''}`}
                   onClick={() => setSelectedPlant(isActive ? null : plant)}>
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-bold">{plant}</h3>
-                      <p className="text-sm text-muted-foreground">{plantRisks.length} risco(s) mapeado(s)</p>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-bold">{plant}</h3>
+                        <p className="text-sm text-muted-foreground">{plantRisks.length} risco(s) mapeado(s)</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Nível de Risco</p>
+                        <Badge className={`${priorityColor(level)} text-lg`}>{level}</Badge>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Nível de Risco</p>
-                      <Badge className={`${priorityColor(level)} text-lg`}>{level}</Badge>
-                    </div>
+                    {/* === NOVA FUNCIONALIDADE: Mini-mapa da planta === */}
+                    <PlantMiniMap plant={plant} avgGut={avgGut} />
+                    <p className="text-xs text-muted-foreground text-center">
+                      GUT médio: <strong className="text-foreground">{avgGut.toFixed(1)}</strong>
+                    </p>
                   </CardContent>
                 </Card>
               );
