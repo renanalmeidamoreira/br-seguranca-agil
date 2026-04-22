@@ -1,13 +1,16 @@
 import { useMemo } from 'react';
 import { localDB, DB_KEYS, CaseData, formatCurrency } from '@/lib/localDB';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { GitBranch, TrendingUp, TrendingDown, AlertTriangle, DollarSign } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { GitBranch, TrendingUp, TrendingDown, AlertTriangle, DollarSign, FileSpreadsheet } from 'lucide-react';
 import {
   Chart as ChartJS, ArcElement, RadialLinearScale, PointElement, LineElement,
   Tooltip, Legend, Filler,
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { Doughnut, Radar } from 'react-chartjs-2';
+// === NOVA FUNCIONALIDADE: Exportação consolidada para Excel ===
+import { exportRowsToExcel } from '@/lib/exportExcel';
 
 ChartJS.register(ArcElement, RadialLinearScale, PointElement, LineElement, Tooltip, Legend, Filler, ChartDataLabels);
 
@@ -116,9 +119,31 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold flex items-center gap-2">
-        <GitBranch className="w-7 h-7 text-primary" /> Análise & Insights
-      </h1>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <GitBranch className="w-7 h-7 text-primary" /> Análise & Insights
+        </h1>
+        {/* === NOVA FUNCIONALIDADE: Exportar resumo analítico === */}
+        <Button
+          variant="outline"
+          onClick={() => {
+            const summary = [
+              { Indicador: 'Total Perdas', Valor: totalPerdas },
+              { Indicador: 'Total Recuperado', Valor: totalRecuperado },
+              { Indicador: 'Perdas Evitadas (Anual)', Valor: totalEvitado },
+              { Indicador: 'Taxa de Recuperação (%)', Valor: taxaRecuperacao },
+              { Indicador: 'GUT Médio Riscos', Valor: avgGut },
+              { Indicador: 'Taxa de Conformidade (%)', Valor: taxaConformidade },
+              { Indicador: 'Total de Casos', Valor: cases.length },
+              { Indicador: 'Checklists Realizados', Valor: checklists.length },
+              { Indicador: 'Riscos Mapeados', Valor: risks.length },
+            ];
+            exportRowsToExcel(summary, 'synapse_analise_insights', 'Indicadores');
+          }}
+        >
+          <FileSpreadsheet className="w-4 h-4 mr-2" /> Exportar Excel
+        </Button>
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard icon={DollarSign} label="Total Perdas" value={formatCurrency(totalPerdas)} color="text-destructive" />

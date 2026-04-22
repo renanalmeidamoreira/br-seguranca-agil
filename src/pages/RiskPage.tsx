@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-dialog';
-import { Shield, Plus, Trash2, MapPin, Eye, X } from 'lucide-react';
+import { Shield, Plus, Trash2, MapPin, Eye, X, FileSpreadsheet } from 'lucide-react';
+// === NOVA FUNCIONALIDADE: Exportação para Excel ===
+import { exportRowsToExcel } from '@/lib/exportExcel';
 import RiskPlantModal from '@/components/risk/RiskPlantModal';
 import RiskForm from '@/components/risk/RiskForm';
 // === NOVA FUNCIONALIDADE: Mini-mapa nos cartões de planta ===
@@ -149,7 +151,33 @@ export default function RiskPage() {
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Shield className="w-7 h-7 text-primary" /> Painel de Avaliação de Risco
         </h1>
-        <Button onClick={() => setShowForm(!showForm)}><Plus className="w-4 h-4 mr-2" /> Adicionar Risco</Button>
+        <div className="flex gap-2">
+          {/* === NOVA FUNCIONALIDADE: Exportar Excel (respeita filtros) === */}
+          <Button
+            variant="outline"
+            onClick={() => {
+              const rows = tableRisks.map(r => ({
+                ID: r.displayId,
+                Planta: r.plant,
+                Setor: r.sector,
+                Fato: r.fact,
+                'Data Avaliação': r.evaluationDate,
+                G: r.g, U: r.u, T: r.t,
+                Score: r.score,
+                Prioridade: r.priority,
+                Recomendação: r.recommendation,
+                'Plano de Ação': r.actionPlan,
+                Responsável: r.responsible,
+                Status: r.status,
+              }));
+              const ok = exportRowsToExcel(rows, 'synapse_riscos', 'Riscos');
+              showAlert(ok ? 'Riscos exportados.' : 'Nenhum risco para exportar.', ok ? 'success' : 'info');
+            }}
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-2" /> Exportar Excel
+          </Button>
+          <Button onClick={() => setShowForm(!showForm)}><Plus className="w-4 h-4 mr-2" /> Adicionar Risco</Button>
+        </div>
       </div>
 
       {/* KPIs */}
