@@ -6,13 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-dialog';
-import { Shield, Plus, Trash2, MapPin, Eye, X, FileSpreadsheet } from 'lucide-react';
+import { Shield, Plus, Trash2, MapPin, Eye, X, FileSpreadsheet, Pencil } from 'lucide-react';
 // === NOVA FUNCIONALIDADE: Exportação para Excel ===
 import { exportRowsToExcel } from '@/lib/exportExcel';
 import RiskPlantModal from '@/components/risk/RiskPlantModal';
 import RiskForm from '@/components/risk/RiskForm';
 // === NOVA FUNCIONALIDADE: Mini-mapa nos cartões de planta ===
 import PlantMiniMap from '@/components/risk/PlantMiniMap';
+// === NOVA FUNCIONALIDADE: Modal de edição dinâmica de riscos ===
+import RiskEditModal from '@/components/risk/RiskEditModal';
 
 export interface RiskAssessment {
   id: string;
@@ -67,8 +69,20 @@ export default function RiskPage() {
   const [yearFilter, setYearFilter] = useState<string>('');
   // === NOVA FUNCIONALIDADE: Confirmação de exclusão de risco ===
   const [deleteTarget, setDeleteTarget] = useState<RiskAssessment | null>(null);
+  // === NOVA FUNCIONALIDADE: Edição dinâmica de risco ===
+  const [editTarget, setEditTarget] = useState<RiskAssessment | null>(null);
 
   const refresh = () => setRisks(localDB.load<RiskAssessment>(DB_KEYS.risks));
+
+  // === NOVA FUNCIONALIDADE: Salvar edição com recálculo automático e refresh do mapa ===
+  const handleUpdate = (updated: RiskAssessment) => {
+    localDB.update(DB_KEYS.risks, updated);
+    markForSync(DB_KEYS.risks, updated.id);
+    log(`Atualizou risco: ${updated.displayId}`);
+    showAlert('Risco atualizado com sucesso!', 'success');
+    setEditTarget(null);
+    refresh();
+  };
 
   const handleCreate = (form: any) => {
     const all = localDB.load<RiskAssessment>(DB_KEYS.risks);
@@ -236,6 +250,17 @@ export default function RiskPage() {
                     <p className="text-xs text-muted-foreground text-center">
                       GUT médio: <strong className="text-foreground">{avgGut.toFixed(1)}</strong>
                     </p>
+                    {/* === NOVA FUNCIONALIDADE: Botão de edição rápida do primeiro risco da planta === */}
+                    <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); setEditTarget(plantRisks[0]); }}
+                        title="Editar dados desta planta (recalcula mapa e GUT automaticamente)"
+                      >
+                        <Pencil className="w-3.5 h-3.5 mr-1" /> Editar
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               );
@@ -291,7 +316,11 @@ export default function RiskPage() {
                     <td className="p-3">{risk.status}</td>
                     <td className="p-3">
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(risk)}>
+                        {/* === NOVA FUNCIONALIDADE: Editar risco individual === */}
+                        <Button variant="ghost" size="icon" onClick={() => setEditTarget(risk)} title="Editar risco">
+                          <Pencil className="w-4 h-4 text-primary" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(risk)} title="Excluir risco">
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
                       </div>
@@ -321,6 +350,15 @@ export default function RiskPage() {
         onOpenChange={(o) => !o && setDeleteTarget(null)}
         itemLabel={deleteTarget ? `o risco ${deleteTarget.displayId}` : 'este risco'}
         onConfirm={confirmDelete}
+      />
+
+      {/* === NOVA FUNCIONALIDADE: Modal de edição dinâmica === */}
+      <RiskEditModal
+        open={!!editTarget}
+        onOpenChange={(o) => !o && setEditTarget(null)}
+        risk={editTarget}
+        existingPlants={plantGroups.map(([p]) => p)}
+        onSave={handleUpdate}
       />
     </div>
   );
