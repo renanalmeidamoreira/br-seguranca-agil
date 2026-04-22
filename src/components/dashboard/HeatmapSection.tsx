@@ -84,6 +84,8 @@ export default function HeatmapSection({ cases }: Props) {
   const [mapTheme, setMapTheme] = useState<'dark' | 'light'>('dark');
   // Cache de geocoding dinâmico (Nominatim)
   const [geocodeCache, setGeocodeCache] = useState<Record<string, [number, number] | null>>(() => loadGeocodeCache());
+  // === NOVA FUNCIONALIDADE: Refresh manual do mapa ===
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Load leaflet.heat dynamically
   useEffect(() => {
