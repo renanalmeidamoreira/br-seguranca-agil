@@ -235,6 +235,15 @@ export default function HeatmapSection({ cases }: Props) {
             {mapTheme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             {mapTheme === 'dark' ? 'Claro' : 'Escuro'}
           </button>
+          {/* === NOVA FUNCIONALIDADE: Botão Atualizar Mapa === */}
+          <button
+            onClick={() => setRefreshKey(k => k + 1)}
+            className="text-sm flex items-center gap-1.5 rounded-lg px-3 py-1.5 bg-primary text-primary-foreground hover:opacity-90"
+            title="Recarregar dados e recalcular círculos"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Atualizar Mapa
+          </button>
         </div>
       </div>
       <div className="rounded-lg overflow-hidden border border-border" style={{ height: 500, position: 'relative', zIndex: 1 }}>
