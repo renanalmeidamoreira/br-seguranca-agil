@@ -250,6 +250,17 @@ export default function RiskPage() {
                     <p className="text-xs text-muted-foreground text-center">
                       GUT médio: <strong className="text-foreground">{avgGut.toFixed(1)}</strong>
                     </p>
+                    {/* === NOVA FUNCIONALIDADE: Botão de edição rápida do primeiro risco da planta === */}
+                    <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); setEditTarget(plantRisks[0]); }}
+                        title="Editar dados desta planta (recalcula mapa e GUT automaticamente)"
+                      >
+                        <Pencil className="w-3.5 h-3.5 mr-1" /> Editar
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               );
@@ -305,7 +316,11 @@ export default function RiskPage() {
                     <td className="p-3">{risk.status}</td>
                     <td className="p-3">
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(risk)}>
+                        {/* === NOVA FUNCIONALIDADE: Editar risco individual === */}
+                        <Button variant="ghost" size="icon" onClick={() => setEditTarget(risk)} title="Editar risco">
+                          <Pencil className="w-4 h-4 text-primary" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(risk)} title="Excluir risco">
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
                       </div>
@@ -335,6 +350,15 @@ export default function RiskPage() {
         onOpenChange={(o) => !o && setDeleteTarget(null)}
         itemLabel={deleteTarget ? `o risco ${deleteTarget.displayId}` : 'este risco'}
         onConfirm={confirmDelete}
+      />
+
+      {/* === NOVA FUNCIONALIDADE: Modal de edição dinâmica === */}
+      <RiskEditModal
+        open={!!editTarget}
+        onOpenChange={(o) => !o && setEditTarget(null)}
+        risk={editTarget}
+        existingPlants={plantGroups.map(([p]) => p)}
+        onSave={handleUpdate}
       />
     </div>
   );
