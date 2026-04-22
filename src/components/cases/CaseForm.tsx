@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { CaseData, generateSequentialDisplayId, formatCurrency } from '@/lib/localDB';
 import { X, Plus, Trash2 } from 'lucide-react';
+// === NOVA FUNCIONALIDADE: Autocomplete de cidades para o campo LOCAL ===
+import CityAutocomplete from '@/components/cases/CityAutocomplete';
 
 function calculateSeverity(g: number, u: number, t: number) {
   const score = g * u * t;
@@ -155,7 +157,15 @@ export default function CaseForm({ editingCase, onClose }: Props) {
           </div>
           <div>
             <label className={labelClass}>LOCAL *</label>
-            <input type="text" value={form.LOCAL} onChange={e => handleChange('LOCAL', e.target.value)} className={inputClass} required />
+            {/* === NOVA FUNCIONALIDADE: Autocomplete sugere cidades já mapeadas/lançadas === */}
+            <CityAutocomplete
+              value={form.LOCAL}
+              onChange={(v) => handleChange('LOCAL', v)}
+              existingLocals={cases.map(c => c.LOCAL).filter(Boolean) as string[]}
+              className={inputClass}
+              required
+              placeholder="Ex: Visconde do Rio Branco"
+            />
           </div>
           <div>
             <label className={labelClass}>UNIDADE</label>
