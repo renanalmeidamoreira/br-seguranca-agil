@@ -2,7 +2,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { MapContainer, TileLayer, useMap, CircleMarker, Tooltip } from 'react-leaflet';
 import type { CaseData } from '@/lib/localDB';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, RefreshCw } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 // === NOVA FUNCIONALIDADE: Base compartilhada de cidades (também usada no autocomplete) ===
 import { COORD_MAP, MG_CENTER, normalizeCity, findCoordsLocal } from '@/lib/cityCoords';
@@ -84,6 +84,8 @@ export default function HeatmapSection({ cases }: Props) {
   const [mapTheme, setMapTheme] = useState<'dark' | 'light'>('dark');
   // Cache de geocoding dinâmico (Nominatim)
   const [geocodeCache, setGeocodeCache] = useState<Record<string, [number, number] | null>>(() => loadGeocodeCache());
+  // === NOVA FUNCIONALIDADE: Refresh manual do mapa ===
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Load leaflet.heat dynamically
   useEffect(() => {
@@ -233,11 +235,20 @@ export default function HeatmapSection({ cases }: Props) {
             {mapTheme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             {mapTheme === 'dark' ? 'Claro' : 'Escuro'}
           </button>
+          {/* === NOVA FUNCIONALIDADE: Botão Atualizar Mapa === */}
+          <button
+            onClick={() => setRefreshKey(k => k + 1)}
+            className="text-sm flex items-center gap-1.5 rounded-lg px-3 py-1.5 bg-primary text-primary-foreground hover:opacity-90"
+            title="Recarregar dados e recalcular círculos"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Atualizar Mapa
+          </button>
         </div>
       </div>
       <div className="rounded-lg overflow-hidden border border-border" style={{ height: 500, position: 'relative', zIndex: 1 }}>
         <MapContainer
-          key={mapTheme}
+          key={`${mapTheme}-${refreshKey}`}
           center={[-18, -44]}
           zoom={5}
           style={{ height: '100%', width: '100%' }}

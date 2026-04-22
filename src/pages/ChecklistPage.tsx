@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ClipboardCheck, Plus, Trash2, Eye, Star } from 'lucide-react';
+import { ClipboardCheck, Plus, Trash2, Eye, Star, FileSpreadsheet } from 'lucide-react';
+// === NOVA FUNCIONALIDADE: Exportação para Excel ===
+import { exportRowsToExcel } from '@/lib/exportExcel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 
@@ -190,7 +192,34 @@ export default function ChecklistPage() {
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <ClipboardCheck className="w-7 h-7 text-primary" /> Checklist da Distribuição
         </h1>
-        <Button onClick={() => setShowForm(!showForm)}><Plus className="w-4 h-4 mr-2" /> Registrar Novo Checklist</Button>
+        <div className="flex gap-2">
+          {/* === NOVA FUNCIONALIDADE: Exportar Excel === */}
+          <Button
+            variant="outline"
+            onClick={() => {
+              const rows = checklists.map((c: any) => ({
+                ID: c.displayId,
+                Data: c.examiner_date,
+                Examinador: c.examiner_name,
+                Unidade: c.examiner_unit,
+                Empresa: c.transporter_company,
+                Placa: c.transporter_plate,
+                Motorista: c.transporter_driver_name,
+                'CNH Vencimento': c.transporter_cnh_expiry,
+                Veículo: c.transporter_vehicle_type,
+                'Cliente': c.customer_name,
+                'Avaliação': c.customer_rating,
+                'Tem Alteração': c.hasAlteration ? 'Sim' : 'Não',
+                'Motorista Desligado': c.driver_terminated ? 'Sim' : 'Não',
+              }));
+              const ok = exportRowsToExcel(rows, 'synapse_checklists', 'Checklists');
+              showAlert(ok ? 'Checklists exportados.' : 'Nenhum checklist para exportar.', ok ? 'success' : 'info');
+            }}
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-2" /> Exportar Excel
+          </Button>
+          <Button onClick={() => setShowForm(!showForm)}><Plus className="w-4 h-4 mr-2" /> Registrar Novo Checklist</Button>
+        </div>
       </div>
 
       {/* KPIs */}

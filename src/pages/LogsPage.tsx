@@ -4,7 +4,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { History, Trash2, Download } from 'lucide-react';
+import { History, Trash2, Download, FileSpreadsheet } from 'lucide-react';
+// === NOVA FUNCIONALIDADE: Exportação para Excel ===
+import { exportRowsToExcel } from '@/lib/exportExcel';
 
 interface ActivityLog {
   id: string;
@@ -52,6 +54,21 @@ export default function LogsPage() {
         </h1>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={exportLogs}><Download className="w-4 h-4 mr-1" /> Exportar CSV</Button>
+          {/* === NOVA FUNCIONALIDADE: Exportar Excel (respeita filtro) === */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const rows = filtered.map(l => ({
+                'Data/Hora': l.timestamp,
+                Usuário: l.user,
+                Ação: l.action,
+              }));
+              exportRowsToExcel(rows, 'synapse_logs', 'Logs');
+            }}
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-1" /> Excel
+          </Button>
           <Button variant="destructive" size="sm" onClick={clearLogs}><Trash2 className="w-4 h-4 mr-1" /> Limpar</Button>
         </div>
       </div>

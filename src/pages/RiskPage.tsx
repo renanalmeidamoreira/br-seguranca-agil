@@ -6,9 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-dialog';
-import { Shield, Plus, Trash2, MapPin, Eye, X } from 'lucide-react';
+import { Shield, Plus, Trash2, MapPin, Eye, X, FileSpreadsheet } from 'lucide-react';
+// === NOVA FUNCIONALIDADE: Exportação para Excel ===
+import { exportRowsToExcel } from '@/lib/exportExcel';
 import RiskPlantModal from '@/components/risk/RiskPlantModal';
 import RiskForm from '@/components/risk/RiskForm';
+// === NOVA FUNCIONALIDADE: Mini-mapa nos cartões de planta ===
+import PlantMiniMap from '@/components/risk/PlantMiniMap';
 
 export interface RiskAssessment {
   id: string;
@@ -147,7 +151,33 @@ export default function RiskPage() {
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Shield className="w-7 h-7 text-primary" /> Painel de Avaliação de Risco
         </h1>
-        <Button onClick={() => setShowForm(!showForm)}><Plus className="w-4 h-4 mr-2" /> Adicionar Risco</Button>
+        <div className="flex gap-2">
+          {/* === NOVA FUNCIONALIDADE: Exportar Excel (respeita filtros) === */}
+          <Button
+            variant="outline"
+            onClick={() => {
+              const rows = tableRisks.map(r => ({
+                ID: r.displayId,
+                Planta: r.plant,
+                Setor: r.sector,
+                Fato: r.fact,
+                'Data Avaliação': r.evaluationDate,
+                G: r.g, U: r.u, T: r.t,
+                Score: r.score,
+                Prioridade: r.priority,
+                Recomendação: r.recommendation,
+                'Plano de Ação': r.actionPlan,
+                Responsável: r.responsible,
+                Status: r.status,
+              }));
+              const ok = exportRowsToExcel(rows, 'synapse_riscos', 'Riscos');
+              showAlert(ok ? 'Riscos exportados.' : 'Nenhum risco para exportar.', ok ? 'success' : 'info');
+            }}
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-2" /> Exportar Excel
+          </Button>
+          <Button onClick={() => setShowForm(!showForm)}><Plus className="w-4 h-4 mr-2" /> Adicionar Risco</Button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -178,6 +208,10 @@ export default function RiskPage() {
             {plantGroups.map(([plant, plantRisks]) => {
               const level = overallLevel(plantRisks);
               const isActive = selectedPlant === plant;
+              // === Cálculo do GUT médio (G + U + T) por planta ===
+              const avgGut = plantRisks.length > 0
+                ? plantRisks.reduce((s, r) => s + ((r.g || 0) + (r.u || 0) + (r.t || 0)) / 3, 0) / plantRisks.length
+                : 0;
               return (
                 <Card key={plant}
                   className={`cursor-pointer transition-all hover:shadow-lg border-l-4 ${
@@ -186,15 +220,22 @@ export default function RiskPage() {
                     level === 'Moderado' ? 'border-l-info' : 'border-l-success'
                   } ${isActive ? 'ring-2 ring-primary' : ''}`}
                   onClick={() => setSelectedPlant(isActive ? null : plant)}>
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-bold">{plant}</h3>
-                      <p className="text-sm text-muted-foreground">{plantRisks.length} risco(s) mapeado(s)</p>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-bold">{plant}</h3>
+                        <p className="text-sm text-muted-foreground">{plantRisks.length} risco(s) mapeado(s)</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Nível de Risco</p>
+                        <Badge className={`${priorityColor(level)} text-lg`}>{level}</Badge>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Nível de Risco</p>
-                      <Badge className={`${priorityColor(level)} text-lg`}>{level}</Badge>
-                    </div>
+                    {/* === NOVA FUNCIONALIDADE: Mini-mapa da planta === */}
+                    <PlantMiniMap plant={plant} avgGut={avgGut} />
+                    <p className="text-xs text-muted-foreground text-center">
+                      GUT médio: <strong className="text-foreground">{avgGut.toFixed(1)}</strong>
+                    </p>
                   </CardContent>
                 </Card>
               );
