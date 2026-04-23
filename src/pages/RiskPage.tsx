@@ -309,6 +309,7 @@ export default function RiskPage() {
                 <tr>
                   <th className="text-left p-3 text-xs uppercase font-semibold">ID</th>
                   <th className="text-left p-3 text-xs uppercase font-semibold">Planta</th>
+                  <th className="text-left p-3 text-xs uppercase font-semibold">Local</th>
                   <th className="text-left p-3 text-xs uppercase font-semibold">Setor</th>
                   <th className="text-left p-3 text-xs uppercase font-semibold">Fato Constatado</th>
                   <th className="text-left p-3 text-xs uppercase font-semibold">Prioridade</th>
@@ -321,6 +322,7 @@ export default function RiskPage() {
                   <tr key={risk.id} className="border-t border-border hover:bg-secondary/50">
                     <td className="p-3 font-mono text-primary">{risk.displayId}</td>
                     <td className="p-3">{risk.plant}</td>
+                    <td className="p-3 text-muted-foreground">{risk.local || '—'}</td>
                     <td className="p-3">{risk.sector}</td>
                     <td className="p-3 max-w-xs truncate" title={risk.recommendation || risk.fact}>{risk.fact}</td>
                     <td className="p-3"><Badge className={priorityColor(risk.priority)}>{risk.priority}</Badge></td>
