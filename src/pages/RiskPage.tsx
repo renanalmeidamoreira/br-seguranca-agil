@@ -20,6 +20,10 @@ export interface RiskAssessment {
   id: string;
   displayId: string;
   plant: string;
+  // === NOVA FUNCIONALIDADE: Campo LOCAL (cidade) separado da PLANTA (unidade) ===
+  // PLANTA = nome da unidade/instalação (ex.: "Usina Ipatinga")
+  // LOCAL  = cidade usada para o mapa de calor (ex.: "Ipatinga/MG")
+  local?: string;
   sector: string;
   fact: string;
   evaluationDate: string;
@@ -90,7 +94,7 @@ export default function RiskPage() {
     const newRisk: RiskAssessment = {
       id: crypto.randomUUID(),
       displayId: generateSequentialDisplayId('RSK', all),
-      plant: form.plant, sector: form.sector, fact: form.fact,
+      plant: form.plant, local: form.local || '', sector: form.sector, fact: form.fact,
       evaluationDate: form.evaluationDate,
       g: form.g, u: form.u, t: form.t, score, priority, level,
       recommendation: form.recommendation, actionPlan: form.actionPlan,
@@ -173,6 +177,7 @@ export default function RiskPage() {
               const rows = tableRisks.map(r => ({
                 ID: r.displayId,
                 Planta: r.plant,
+                Local: r.local || '',
                 Setor: r.sector,
                 Fato: r.fact,
                 'Data Avaliação': r.evaluationDate,
@@ -238,6 +243,12 @@ export default function RiskPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="text-lg font-bold">{plant}</h3>
+                        {/* === Local (cidade) exibido separado da Planta === */}
+                        {plantRisks[0]?.local && (
+                          <p className="text-xs text-primary flex items-center gap-1">
+                            <MapPin className="w-3 h-3" /> {plantRisks[0].local}
+                          </p>
+                        )}
                         <p className="text-sm text-muted-foreground">{plantRisks.length} risco(s) mapeado(s)</p>
                       </div>
                       <div className="text-right">
@@ -245,8 +256,8 @@ export default function RiskPage() {
                         <Badge className={`${priorityColor(level)} text-lg`}>{level}</Badge>
                       </div>
                     </div>
-                    {/* === NOVA FUNCIONALIDADE: Mini-mapa da planta === */}
-                    <PlantMiniMap plant={plant} avgGut={avgGut} />
+                    {/* === NOVA FUNCIONALIDADE: Mini-mapa usa LOCAL (cidade) com fallback para PLANTA === */}
+                    <PlantMiniMap plant={plantRisks[0]?.local || plant} avgGut={avgGut} />
                     <p className="text-xs text-muted-foreground text-center">
                       GUT médio: <strong className="text-foreground">{avgGut.toFixed(1)}</strong>
                     </p>
@@ -298,6 +309,7 @@ export default function RiskPage() {
                 <tr>
                   <th className="text-left p-3 text-xs uppercase font-semibold">ID</th>
                   <th className="text-left p-3 text-xs uppercase font-semibold">Planta</th>
+                  <th className="text-left p-3 text-xs uppercase font-semibold">Local</th>
                   <th className="text-left p-3 text-xs uppercase font-semibold">Setor</th>
                   <th className="text-left p-3 text-xs uppercase font-semibold">Fato Constatado</th>
                   <th className="text-left p-3 text-xs uppercase font-semibold">Prioridade</th>
@@ -310,6 +322,7 @@ export default function RiskPage() {
                   <tr key={risk.id} className="border-t border-border hover:bg-secondary/50">
                     <td className="p-3 font-mono text-primary">{risk.displayId}</td>
                     <td className="p-3">{risk.plant}</td>
+                    <td className="p-3 text-muted-foreground">{risk.local || '—'}</td>
                     <td className="p-3">{risk.sector}</td>
                     <td className="p-3 max-w-xs truncate" title={risk.recommendation || risk.fact}>{risk.fact}</td>
                     <td className="p-3"><Badge className={priorityColor(risk.priority)}>{risk.priority}</Badge></td>
@@ -328,7 +341,7 @@ export default function RiskPage() {
                   </tr>
                 ))}
                 {tableRisks.length === 0 && (
-                  <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Nenhum risco encontrado.</td></tr>
+                  <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Nenhum risco encontrado.</td></tr>
                 )}
               </tbody>
             </table>

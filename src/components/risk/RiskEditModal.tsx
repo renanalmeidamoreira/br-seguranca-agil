@@ -36,8 +36,8 @@ export default function RiskEditModal({ open, onOpenChange, risk, existingPlants
   // Sincroniza o estado quando o risco selecionado mudar
   useEffect(() => { setForm(risk); }, [risk]);
 
-  // Coordenadas resolvidas a partir do nome da planta (auto-preenchidas)
-  const coords = useMemo(() => form ? findCoordsLocal(form.plant) || null : null, [form?.plant]);
+  // Coordenadas resolvidas a partir do LOCAL (cidade) — não mais da planta/unidade
+  const coords = useMemo(() => form ? findCoordsLocal(form.local || form.plant) || null : null, [form?.local, form?.plant]);
 
   if (!form) return null;
 
@@ -49,11 +49,10 @@ export default function RiskEditModal({ open, onOpenChange, risk, existingPlants
 
   const handleSave = () => {
     if (!form.plant.trim() || !form.fact.trim()) return;
-    // Normaliza nome da planta para garantir match com o COORD_MAP
-    const normalizedPlant = form.plant.trim();
     onSave({
       ...form,
-      plant: normalizedPlant,
+      plant: form.plant.trim(),
+      local: (form.local || '').trim(),
       score,
       priority,
       level,
@@ -70,19 +69,34 @@ export default function RiskEditModal({ open, onOpenChange, risk, existingPlants
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Planta com autocomplete de cidade */}
-          <div className="md:col-span-2">
+          {/* === PLANTA: nome livre da unidade/instalação (não usado no mapa) === */}
+          <div>
             <label className="text-sm text-muted-foreground flex items-center gap-1">
-              <span title="Cidade que será plotada no mapa de calor">Planta / Local</span>
+              <span title="Nome da unidade ou instalação (ex.: Usina Ipatinga)">Planta / Unidade</span>
+              <Info className="w-3 h-3" />
+            </label>
+            <input
+              type="text"
+              value={form.plant}
+              onChange={e => set('plant', e.target.value)}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              placeholder="Ex.: Usina Ipatinga"
+              required
+            />
+          </div>
+
+          {/* === LOCAL: cidade plotada no mapa de calor (autocomplete) === */}
+          <div>
+            <label className="text-sm text-muted-foreground flex items-center gap-1">
+              <span title="Cidade que será plotada no mapa de calor — independente do nome da planta">Local (cidade)</span>
               <Info className="w-3 h-3" />
             </label>
             <CityAutocomplete
-              value={form.plant}
-              onChange={(v) => set('plant', v)}
+              value={form.local || ''}
+              onChange={(v) => set('local', v)}
               existingLocals={existingPlants}
               className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-              placeholder="Ex.: Visconde do Rio Branco"
-              required
+              placeholder="Ex.: Ipatinga/MG"
             />
             <p className="text-xs text-muted-foreground mt-1">
               {coords
