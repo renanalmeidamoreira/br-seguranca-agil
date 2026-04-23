@@ -243,6 +243,12 @@ export default function RiskPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="text-lg font-bold">{plant}</h3>
+                        {/* === Local (cidade) exibido separado da Planta === */}
+                        {plantRisks[0]?.local && (
+                          <p className="text-xs text-primary flex items-center gap-1">
+                            <MapPin className="w-3 h-3" /> {plantRisks[0].local}
+                          </p>
+                        )}
                         <p className="text-sm text-muted-foreground">{plantRisks.length} risco(s) mapeado(s)</p>
                       </div>
                       <div className="text-right">
@@ -250,8 +256,8 @@ export default function RiskPage() {
                         <Badge className={`${priorityColor(level)} text-lg`}>{level}</Badge>
                       </div>
                     </div>
-                    {/* === NOVA FUNCIONALIDADE: Mini-mapa da planta === */}
-                    <PlantMiniMap plant={plant} avgGut={avgGut} />
+                    {/* === NOVA FUNCIONALIDADE: Mini-mapa usa LOCAL (cidade) com fallback para PLANTA === */}
+                    <PlantMiniMap plant={plantRisks[0]?.local || plant} avgGut={avgGut} />
                     <p className="text-xs text-muted-foreground text-center">
                       GUT médio: <strong className="text-foreground">{avgGut.toFixed(1)}</strong>
                     </p>
