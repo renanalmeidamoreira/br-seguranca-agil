@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+// === NOVA FUNCIONALIDADE: Autocomplete de cidade no campo LOCAL ===
+import CityAutocomplete from '@/components/cases/CityAutocomplete';
 
 const STATUS_OPTIONS = ['Pendente', 'Em Andamento', 'Concluído', 'Cancelado'];
 
@@ -29,7 +31,7 @@ interface Props {
 
 export default function RiskForm({ onSubmit, onCancel }: Props) {
   const [form, setForm] = useState({
-    plant: '', sector: '', fact: '', evaluationDate: new Date().toISOString().slice(0, 10),
+    plant: '', local: '', sector: '', fact: '', evaluationDate: new Date().toISOString().slice(0, 10),
     g: 1, u: 1, t: 1,
     recommendation: '', actionPlan: '',
     responsible: '', date: '', status: 'Pendente',
@@ -61,10 +63,29 @@ export default function RiskForm({ onSubmit, onCancel }: Props) {
             <div className="bg-secondary/30 p-4 rounded-lg border border-border space-y-4">
               <h3 className="text-base font-semibold text-primary">Risco Identificado</h3>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="text-sm text-muted-foreground">Planta</label>
-                  <Input value={form.plant} onChange={e => set('plant', e.target.value)} required /></div>
-                <div><label className="text-sm text-muted-foreground">Setor</label>
-                  <Input value={form.sector} onChange={e => set('sector', e.target.value)} required /></div>
+                <div>
+                  <label className="text-sm text-muted-foreground" title="Nome da unidade ou instalação (ex.: Usina Ipatinga)">
+                    Planta / Unidade
+                  </label>
+                  <Input value={form.plant} onChange={e => set('plant', e.target.value)} placeholder="Ex.: Usina Ipatinga" required />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground" title="Cidade onde a planta está localizada — usada no mapa de calor">
+                    Local (cidade) *
+                  </label>
+                  {/* === NOVA FUNCIONALIDADE: Autocomplete de cidades para o campo LOCAL === */}
+                  <CityAutocomplete
+                    value={form.local}
+                    onChange={(v) => set('local', v)}
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    placeholder="Ex.: Ipatinga/MG"
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Setor</label>
+                <Input value={form.sector} onChange={e => set('sector', e.target.value)} required />
               </div>
               <div><label className="text-sm text-muted-foreground">Fato Constatado</label>
                 <textarea value={form.fact} onChange={e => set('fact', e.target.value)}
@@ -119,7 +140,7 @@ export default function RiskForm({ onSubmit, onCancel }: Props) {
         <div className="flex justify-end gap-2 mt-6">
           <Button variant="outline" onClick={onCancel}>Cancelar</Button>
           <Button onClick={() => {
-            if (!form.plant.trim() || !form.fact.trim()) return;
+            if (!form.plant.trim() || !form.fact.trim() || !form.local.trim()) return;
             onSubmit(form);
           }}>Salvar Risco</Button>
         </div>
