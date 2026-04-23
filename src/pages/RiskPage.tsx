@@ -341,7 +341,7 @@ export default function RiskPage() {
                   </tr>
                 ))}
                 {tableRisks.length === 0 && (
-                  <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Nenhum risco encontrado.</td></tr>
+                  <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Nenhum risco encontrado.</td></tr>
                 )}
               </tbody>
             </table>
