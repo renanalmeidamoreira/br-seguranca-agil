@@ -20,6 +20,10 @@ export interface RiskAssessment {
   id: string;
   displayId: string;
   plant: string;
+  // === NOVA FUNCIONALIDADE: Campo LOCAL (cidade) separado da PLANTA (unidade) ===
+  // PLANTA = nome da unidade/instalação (ex.: "Usina Ipatinga")
+  // LOCAL  = cidade usada para o mapa de calor (ex.: "Ipatinga/MG")
+  local?: string;
   sector: string;
   fact: string;
   evaluationDate: string;
@@ -90,7 +94,7 @@ export default function RiskPage() {
     const newRisk: RiskAssessment = {
       id: crypto.randomUUID(),
       displayId: generateSequentialDisplayId('RSK', all),
-      plant: form.plant, sector: form.sector, fact: form.fact,
+      plant: form.plant, local: form.local || '', sector: form.sector, fact: form.fact,
       evaluationDate: form.evaluationDate,
       g: form.g, u: form.u, t: form.t, score, priority, level,
       recommendation: form.recommendation, actionPlan: form.actionPlan,
@@ -173,6 +177,7 @@ export default function RiskPage() {
               const rows = tableRisks.map(r => ({
                 ID: r.displayId,
                 Planta: r.plant,
+                Local: r.local || '',
                 Setor: r.sector,
                 Fato: r.fact,
                 'Data Avaliação': r.evaluationDate,
