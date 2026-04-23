@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { History, Trash2, Download, FileSpreadsheet } from 'lucide-react';
 // === NOVA FUNCIONALIDADE: Exportação para Excel ===
 import { exportRowsToExcel } from '@/lib/exportExcel';
+// === NOVA FUNCIONALIDADE: Confirmação para limpar logs ===
+import { ConfirmDeleteDialog } from '@/components/ui/confirm-dialog';
 
 interface ActivityLog {
   id: string;
@@ -18,6 +20,8 @@ interface ActivityLog {
 export default function LogsPage() {
   const [logs, setLogs] = useState<ActivityLog[]>(() => localDB.load<ActivityLog>(DB_KEYS.activityLogs));
   const [filter, setFilter] = useState('');
+  // === NOVA FUNCIONALIDADE: Estado do modal de confirmação ===
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const refresh = () => setLogs(localDB.load<ActivityLog>(DB_KEYS.activityLogs));
 
@@ -69,7 +73,10 @@ export default function LogsPage() {
           >
             <FileSpreadsheet className="w-4 h-4 mr-1" /> Excel
           </Button>
-          <Button variant="destructive" size="sm" onClick={clearLogs}><Trash2 className="w-4 h-4 mr-1" /> Limpar</Button>
+          {/* === NOVA FUNCIONALIDADE: Confirmação antes de limpar logs === */}
+          <Button variant="destructive" size="sm" onClick={() => setConfirmClear(true)}>
+            <Trash2 className="w-4 h-4 mr-1" /> Limpar
+          </Button>
         </div>
       </div>
 
@@ -102,6 +109,15 @@ export default function LogsPage() {
           <p className="text-center text-muted-foreground py-8">Nenhum registro encontrado.</p>
         )}
       </div>
+
+      {/* === NOVA FUNCIONALIDADE: Modal de confirmação de exclusão de logs === */}
+      <ConfirmDeleteDialog
+        open={confirmClear}
+        onOpenChange={setConfirmClear}
+        itemLabel={`todos os ${logs.length} registros de log`}
+        description="Tem certeza que deseja excluir TODOS os logs de atividade? Esta ação não pode ser desfeita."
+        onConfirm={() => { clearLogs(); setConfirmClear(false); }}
+      />
     </div>
   );
 }
