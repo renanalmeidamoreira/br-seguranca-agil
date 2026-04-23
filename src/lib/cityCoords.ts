@@ -1,18 +1,26 @@
-// === NOVA FUNCIONALIDADE: Base compartilhada de cidades para autocomplete e mapa ===
-// Coordenadas conhecidas (offline) + aliases comuns. Usado pelo Heatmap e pelo
-// CityAutocomplete do CaseForm para garantir que o local lançado já caia
-// corretamente nas cidades reconhecidas pelo mapa.
+// === BASE DE DADOS DE CIDADES BRASILEIRAS — SYNAPSE v2 ===
+// Estrutura padronizada:
+//   COORD_MAP:    chave normalizada (minúscula, sem UF) → { lat, lng, uf, pais }
+//   CITY_ALIASES: variações comuns/erros de digitação → chave canônica
 //
-// === CORREÇÃO CRÍTICA: LOCALIZAÇÃO IPATINGA / SEPARAÇÃO PLANTA ≠ LOCAL ===
-// Antes: "Ipatinga/MG" -> normalizava para "ipatinga/mg" e o partial-match
-// encontrava a UF "pa" (Pará/Belém) dentro da string, plotando o ponto no PA.
-// Agora:
-//   1) normalizeCity remove sufixos "/UF", "-UF" e ", UF" (com ou sem espaço).
-//   2) findCoordsLocal IGNORA chaves de 2 letras (UFs) ao fazer partial-match,
-//      evitando colisões absurdas (Ipatinga -> PA, Catalão -> AL, etc.).
-//   3) COORD_MAP expandido com Ipatinga e várias cidades industriais de MG.
+// Notas críticas:
+//   1) normalizeCity remove sufixos "/UF", "-UF", ", UF" para evitar colisões
+//      (ex.: "Ipatinga/MG" não pode casar com a UF "pa" → Belém/PA).
+//   2) findCoordsLocal IGNORA chaves de 2 letras (UFs) no partial-match.
+//   3) formatCityWithUF gera "Cidade-UF" para autocomplete e exportações.
+//   4) Suporta lookup por "Cidade-UF" desambiguando homônimos
+//      (ex.: "Visconde do Rio Branco-MG" vs "Rio Branco-AC").
 
+export interface CityCoord {
+  lat: number;
+  lng: number;
+  uf: string;
+  pais: string;
+}
+
+// === ALIASES (variações comuns sem acento, abreviações, nomes de plantas) ===
 export const CITY_ALIASES: Record<string, string> = {
+  // Variações sem acento
   'visconde rio branco': 'visconde do rio branco',
   'sto antonio amparo': 'santo antônio do amparo',
   'sto antonio padua': 'santo antônio de pádua',
@@ -32,119 +40,167 @@ export const CITY_ALIASES: Record<string, string> = {
   'manhuacu': 'manhuaçu',
   'matipo': 'matipó',
   'brasilia': 'brasília',
-  // === Aliases de plantas/unidades comuns no SYNAPSE ===
+  'aparecida': 'aparecida de goiânia',
+  // === Aliases de plantas/unidades (PLANTA ≠ LOCAL, mas ajuda fallback) ===
   'usina ipatinga': 'ipatinga',
   'planta ipatinga': 'ipatinga',
-  'central de minas': 'central de minas',
 };
 
-export const COORD_MAP: Record<string, [number, number]> = {
-  // === Capitais ===
-  'são paulo': [-23.55, -46.63], 'sp': [-23.55, -46.63],
-  'rio de janeiro': [-22.91, -43.17], 'rj': [-22.91, -43.17],
-  'belo horizonte': [-19.92, -43.94], 'mg': [-19.92, -43.94],
-  'curitiba': [-25.43, -49.27], 'pr': [-25.43, -49.27],
-  'porto alegre': [-30.03, -51.23], 'rs': [-30.03, -51.23],
-  'salvador': [-12.97, -38.51], 'ba': [-12.97, -38.51],
-  'recife': [-8.05, -34.87], 'pe': [-8.05, -34.87],
-  'fortaleza': [-3.72, -38.53], 'ce': [-3.72, -38.53],
-  'brasília': [-15.79, -47.88], 'df': [-15.79, -47.88],
-  'manaus': [-3.12, -60.02], 'am': [-3.12, -60.02],
-  'goiânia': [-16.68, -49.26], 'go': [-16.68, -49.26],
-  'belém': [-1.46, -48.50], 'pa': [-1.46, -48.50],
-  'florianópolis': [-27.60, -48.55], 'sc': [-27.60, -48.55],
-  'vitória': [-20.32, -40.34], 'es': [-20.32, -40.34],
-  'natal': [-5.79, -35.21], 'rn': [-5.79, -35.21],
-  'campo grande': [-20.44, -54.65], 'ms': [-20.44, -54.65],
-  'maceió': [-9.67, -35.74], 'al': [-9.67, -35.74],
-  'teresina': [-5.09, -42.80], 'pi': [-5.09, -42.80],
-  'são luís': [-2.53, -44.28], 'ma': [-2.53, -44.28],
-  'joão pessoa': [-7.12, -34.86], 'pb': [-7.12, -34.86],
-  'cuiabá': [-15.60, -56.10], 'mt': [-15.60, -56.10],
-  'aracaju': [-10.91, -37.07], 'se': [-10.91, -37.07],
-  'palmas': [-10.18, -48.33], 'to': [-10.18, -48.33],
-  'macapá': [0.04, -51.07], 'ap': [0.04, -51.07],
-  'rio branco': [-9.97, -67.81], 'ac': [-9.97, -67.81],
-  'porto velho': [-8.76, -63.90], 'ro': [-8.76, -63.90],
-  'boa vista': [2.82, -60.67], 'rr': [2.82, -60.67],
+// === COORD_MAP — formato { lat, lng, uf, pais } ===
+// UFs (chaves 2 letras) ficam separadas para fallback de capital, mas são
+// IGNORADAS pelo partial-match (ver findCoordsLocal).
+export const COORD_MAP: Record<string, CityCoord> = {
+  // === CAPITAIS ===
+  'são paulo': { lat: -23.5505, lng: -46.6333, uf: 'SP', pais: 'Brasil' },
+  'rio de janeiro': { lat: -22.9068, lng: -43.1729, uf: 'RJ', pais: 'Brasil' },
+  'belo horizonte': { lat: -19.9208, lng: -43.9378, uf: 'MG', pais: 'Brasil' },
+  'curitiba': { lat: -25.4284, lng: -49.2733, uf: 'PR', pais: 'Brasil' },
+  'porto alegre': { lat: -30.0346, lng: -51.2177, uf: 'RS', pais: 'Brasil' },
+  'salvador': { lat: -12.9714, lng: -38.5014, uf: 'BA', pais: 'Brasil' },
+  'recife': { lat: -8.0476, lng: -34.8770, uf: 'PE', pais: 'Brasil' },
+  'fortaleza': { lat: -3.7172, lng: -38.5434, uf: 'CE', pais: 'Brasil' },
+  'brasília': { lat: -15.7942, lng: -47.8822, uf: 'DF', pais: 'Brasil' },
+  'manaus': { lat: -3.1190, lng: -60.0217, uf: 'AM', pais: 'Brasil' },
+  'goiânia': { lat: -16.6869, lng: -49.2648, uf: 'GO', pais: 'Brasil' },
+  'belém': { lat: -1.4558, lng: -48.5039, uf: 'PA', pais: 'Brasil' },
+  'florianópolis': { lat: -27.5954, lng: -48.5480, uf: 'SC', pais: 'Brasil' },
+  'vitória': { lat: -20.3155, lng: -40.3128, uf: 'ES', pais: 'Brasil' },
+  'natal': { lat: -5.7945, lng: -35.2110, uf: 'RN', pais: 'Brasil' },
+  'campo grande': { lat: -20.4486, lng: -54.6295, uf: 'MS', pais: 'Brasil' },
+  'maceió': { lat: -9.6498, lng: -35.7089, uf: 'AL', pais: 'Brasil' },
+  'teresina': { lat: -5.0892, lng: -42.8019, uf: 'PI', pais: 'Brasil' },
+  'são luís': { lat: -2.5307, lng: -44.3068, uf: 'MA', pais: 'Brasil' },
+  'joão pessoa': { lat: -7.1195, lng: -34.8450, uf: 'PB', pais: 'Brasil' },
+  'cuiabá': { lat: -15.6014, lng: -56.0979, uf: 'MT', pais: 'Brasil' },
+  'aracaju': { lat: -10.9472, lng: -37.0731, uf: 'SE', pais: 'Brasil' },
+  'palmas': { lat: -10.1845, lng: -48.3336, uf: 'TO', pais: 'Brasil' },
+  'macapá': { lat: 0.0356, lng: -51.0705, uf: 'AP', pais: 'Brasil' },
+  'rio branco': { lat: -9.9747, lng: -67.8243, uf: 'AC', pais: 'Brasil' },
+  'porto velho': { lat: -8.7619, lng: -63.9039, uf: 'RO', pais: 'Brasil' },
+  'boa vista': { lat: 2.8235, lng: -60.6758, uf: 'RR', pais: 'Brasil' },
 
-  // === MG — cidades industriais e do dataset SYNAPSE (CORREÇÃO IPATINGA) ===
-  'ipatinga': [-19.4693, -42.5625],
-  'central de minas': [-18.7758, -41.3122],
-  'visconde do rio branco': [-21.01, -42.84],
-  'castelo': [-20.61, -41.20],
-  'patrocínio': [-18.94, -46.99],
-  'leopoldina': [-21.53, -42.64],
-  'contagem': [-19.93, -44.05],
-  'pará de minas': [-19.86, -44.61],
-  'santana de cataguases': [-21.39, -42.70],
-  'juiz de fora': [-21.7621, -43.3502],
-  'santo antônio do amparo': [-20.94, -44.92],
-  'ponte nova': [-20.41, -42.91],
-  'natividade': [-21.03, -41.97],
-  'viçosa': [-20.75, -42.88],
-  'ubá': [-21.12, -42.94],
-  'santo antônio de pádua': [-21.54, -42.18],
-  'itabirito': [-20.25, -43.80],
-  'cataguases': [-21.39, -42.70],
-  'manhuaçu': [-20.25, -42.03],
-  'matipó': [-20.29, -42.34],
-  'espera feliz': [-20.65, -41.91],
-  'martins soares': [-20.27, -41.88],
-  'montes claros': [-16.73, -43.86],
-  'cambuquira': [-21.85, -45.30],
-  'governador valadares': [-18.85, -41.95],
-  'coronel fabriciano': [-19.52, -42.63],
-  'timóteo': [-19.58, -42.64],
-  'santana do paraíso': [-19.37, -42.55],
-  'caratinga': [-19.79, -42.14],
-  'uberlândia': [-18.92, -48.28],
-  'uberaba': [-19.75, -47.93],
-  'divinópolis': [-20.14, -44.88],
-  'sete lagoas': [-19.46, -44.25],
-  'betim': [-19.97, -44.20],
-  'nova lima': [-19.98, -43.84],
-  'ribeirão das neves': [-19.77, -44.09],
-  'ouro preto': [-20.39, -43.51],
-  'mariana': [-20.38, -43.42],
-  'itabira': [-19.62, -43.23],
-  'são joão del rei': [-21.13, -44.26],
-  'barbacena': [-21.23, -43.77],
-  'lavras': [-21.25, -45.00],
-  'poços de caldas': [-21.79, -46.56],
-  'pouso alegre': [-22.23, -45.94],
-  'varginha': [-21.55, -45.43],
-  'teófilo otoni': [-17.86, -41.51],
-  'unaí': [-16.36, -46.91],
-  'paracatu': [-17.22, -46.87],
+  // === MG — cidades industriais e do dataset SYNAPSE ===
+  'ipatinga': { lat: -19.4693, lng: -42.5625, uf: 'MG', pais: 'Brasil' },
+  'central de minas': { lat: -18.7758, lng: -41.3122, uf: 'MG', pais: 'Brasil' },
+  'visconde do rio branco': { lat: -21.0056, lng: -42.8519, uf: 'MG', pais: 'Brasil' },
+  'castelo': { lat: -20.6033, lng: -41.2003, uf: 'ES', pais: 'Brasil' },
+  'patrocínio': { lat: -18.9436, lng: -46.9925, uf: 'MG', pais: 'Brasil' },
+  'leopoldina': { lat: -21.5319, lng: -42.6431, uf: 'MG', pais: 'Brasil' },
+  'contagem': { lat: -19.9320, lng: -44.0539, uf: 'MG', pais: 'Brasil' },
+  'pará de minas': { lat: -19.8606, lng: -44.6086, uf: 'MG', pais: 'Brasil' },
+  'santana de cataguases': { lat: -21.3942, lng: -42.7022, uf: 'MG', pais: 'Brasil' },
+  'juiz de fora': { lat: -21.7621, lng: -43.3502, uf: 'MG', pais: 'Brasil' },
+  'santo antônio do amparo': { lat: -20.9408, lng: -44.9197, uf: 'MG', pais: 'Brasil' },
+  'ponte nova': { lat: -20.4153, lng: -42.9081, uf: 'MG', pais: 'Brasil' },
+  'natividade': { lat: -21.0383, lng: -41.9711, uf: 'RJ', pais: 'Brasil' },
+  'viçosa': { lat: -20.7546, lng: -42.8825, uf: 'MG', pais: 'Brasil' },
+  'ubá': { lat: -21.1208, lng: -42.9425, uf: 'MG', pais: 'Brasil' },
+  'santo antônio de pádua': { lat: -21.5400, lng: -42.1819, uf: 'RJ', pais: 'Brasil' },
+  'itabirito': { lat: -20.2519, lng: -43.8025, uf: 'MG', pais: 'Brasil' },
+  'cataguases': { lat: -21.3942, lng: -42.7022, uf: 'MG', pais: 'Brasil' },
+  'manhuaçu': { lat: -20.2575, lng: -42.0286, uf: 'MG', pais: 'Brasil' },
+  'matipó': { lat: -20.2872, lng: -42.3414, uf: 'MG', pais: 'Brasil' },
+  'espera feliz': { lat: -20.6517, lng: -41.9100, uf: 'MG', pais: 'Brasil' },
+  'martins soares': { lat: -20.2725, lng: -41.8800, uf: 'MG', pais: 'Brasil' },
+  'montes claros': { lat: -16.7286, lng: -43.8581, uf: 'MG', pais: 'Brasil' },
+  'cambuquira': { lat: -21.8533, lng: -45.2961, uf: 'MG', pais: 'Brasil' },
+  'governador valadares': { lat: -18.8511, lng: -41.9492, uf: 'MG', pais: 'Brasil' },
+  'coronel fabriciano': { lat: -19.5183, lng: -42.6286, uf: 'MG', pais: 'Brasil' },
+  'timóteo': { lat: -19.5817, lng: -42.6442, uf: 'MG', pais: 'Brasil' },
+  'santana do paraíso': { lat: -19.3711, lng: -42.5483, uf: 'MG', pais: 'Brasil' },
+  'caratinga': { lat: -19.7900, lng: -42.1378, uf: 'MG', pais: 'Brasil' },
+  'uberlândia': { lat: -18.9186, lng: -48.2772, uf: 'MG', pais: 'Brasil' },
+  'uberaba': { lat: -19.7472, lng: -47.9381, uf: 'MG', pais: 'Brasil' },
+  'divinópolis': { lat: -20.1389, lng: -44.8839, uf: 'MG', pais: 'Brasil' },
+  'sete lagoas': { lat: -19.4658, lng: -44.2469, uf: 'MG', pais: 'Brasil' },
+  'betim': { lat: -19.9678, lng: -44.1986, uf: 'MG', pais: 'Brasil' },
+  'nova lima': { lat: -19.9856, lng: -43.8467, uf: 'MG', pais: 'Brasil' },
+  'ribeirão das neves': { lat: -19.7672, lng: -44.0867, uf: 'MG', pais: 'Brasil' },
+  'ouro preto': { lat: -20.3856, lng: -43.5036, uf: 'MG', pais: 'Brasil' },
+  'mariana': { lat: -20.3778, lng: -43.4172, uf: 'MG', pais: 'Brasil' },
+  'itabira': { lat: -19.6189, lng: -43.2267, uf: 'MG', pais: 'Brasil' },
+  'são joão del rei': { lat: -21.1356, lng: -44.2614, uf: 'MG', pais: 'Brasil' },
+  'barbacena': { lat: -21.2258, lng: -43.7736, uf: 'MG', pais: 'Brasil' },
+  'lavras': { lat: -21.2450, lng: -45.0008, uf: 'MG', pais: 'Brasil' },
+  'poços de caldas': { lat: -21.7878, lng: -46.5614, uf: 'MG', pais: 'Brasil' },
+  'pouso alegre': { lat: -22.2300, lng: -45.9367, uf: 'MG', pais: 'Brasil' },
+  'varginha': { lat: -21.5519, lng: -45.4306, uf: 'MG', pais: 'Brasil' },
+  'teófilo otoni': { lat: -17.8578, lng: -41.5061, uf: 'MG', pais: 'Brasil' },
+  'unaí': { lat: -16.3578, lng: -46.9056, uf: 'MG', pais: 'Brasil' },
+  'paracatu': { lat: -17.2222, lng: -46.8711, uf: 'MG', pais: 'Brasil' },
+  'araguari': { lat: -18.6481, lng: -48.1872, uf: 'MG', pais: 'Brasil' },
+  'araxá': { lat: -19.5933, lng: -46.9408, uf: 'MG', pais: 'Brasil' },
+  'patos de minas': { lat: -18.5789, lng: -46.5183, uf: 'MG', pais: 'Brasil' },
+  'conselheiro lafaiete': { lat: -20.6597, lng: -43.7858, uf: 'MG', pais: 'Brasil' },
+  'itaúna': { lat: -20.0794, lng: -44.5764, uf: 'MG', pais: 'Brasil' },
+  'formiga': { lat: -20.4644, lng: -45.4267, uf: 'MG', pais: 'Brasil' },
+  'curvelo': { lat: -18.7569, lng: -44.4308, uf: 'MG', pais: 'Brasil' },
 
-  // === Outras cidades comuns no Brasil ===
-  'campinas': [-22.91, -47.06],
-  'são josé dos campos': [-23.22, -45.90],
-  'santos': [-23.96, -46.33],
-  'guarulhos': [-23.46, -46.53],
-  'osasco': [-23.53, -46.79],
-  'sorocaba': [-23.50, -47.46],
-  'ribeirão preto': [-21.17, -47.81],
-  'niterói': [-22.88, -43.10],
-  'duque de caxias': [-22.78, -43.31],
-  'nova iguaçu': [-22.76, -43.45],
-  'são gonçalo': [-22.83, -43.05],
-  'londrina': [-23.31, -51.16],
-  'maringá': [-23.42, -51.93],
-  'caxias do sul': [-29.17, -51.18],
-  'pelotas': [-31.77, -52.34],
-  'joinville': [-26.30, -48.85],
-  'blumenau': [-26.92, -49.07],
-  'feira de santana': [-12.27, -38.97],
-  'camamu': [-13.94, -39.10],
-  'santa teresa': [-19.94, -40.59],
-  'canoinhas': [-26.18, -50.39],
+  // === SP — principais cidades ===
+  'campinas': { lat: -22.9099, lng: -47.0626, uf: 'SP', pais: 'Brasil' },
+  'são josé dos campos': { lat: -23.2237, lng: -45.9009, uf: 'SP', pais: 'Brasil' },
+  'santos': { lat: -23.9608, lng: -46.3331, uf: 'SP', pais: 'Brasil' },
+  'guarulhos': { lat: -23.4628, lng: -46.5333, uf: 'SP', pais: 'Brasil' },
+  'osasco': { lat: -23.5328, lng: -46.7917, uf: 'SP', pais: 'Brasil' },
+  'sorocaba': { lat: -23.5015, lng: -47.4526, uf: 'SP', pais: 'Brasil' },
+  'ribeirão preto': { lat: -21.1775, lng: -47.8103, uf: 'SP', pais: 'Brasil' },
+  'são bernardo do campo': { lat: -23.6914, lng: -46.5645, uf: 'SP', pais: 'Brasil' },
+  'santo andré': { lat: -23.6634, lng: -46.5383, uf: 'SP', pais: 'Brasil' },
+  'são josé do rio preto': { lat: -20.8113, lng: -49.3758, uf: 'SP', pais: 'Brasil' },
+  'piracicaba': { lat: -22.7253, lng: -47.6492, uf: 'SP', pais: 'Brasil' },
+  'bauru': { lat: -22.3147, lng: -49.0608, uf: 'SP', pais: 'Brasil' },
+  'jundiaí': { lat: -23.1864, lng: -46.8842, uf: 'SP', pais: 'Brasil' },
+  'mogi das cruzes': { lat: -23.5225, lng: -46.1881, uf: 'SP', pais: 'Brasil' },
+  'taubaté': { lat: -23.0264, lng: -45.5553, uf: 'SP', pais: 'Brasil' },
+  'limeira': { lat: -22.5647, lng: -47.4017, uf: 'SP', pais: 'Brasil' },
+  'suzano': { lat: -23.5425, lng: -46.3108, uf: 'SP', pais: 'Brasil' },
+
+  // === RJ ===
+  'niterói': { lat: -22.8833, lng: -43.1036, uf: 'RJ', pais: 'Brasil' },
+  'duque de caxias': { lat: -22.7858, lng: -43.3056, uf: 'RJ', pais: 'Brasil' },
+  'nova iguaçu': { lat: -22.7592, lng: -43.4511, uf: 'RJ', pais: 'Brasil' },
+  'são gonçalo': { lat: -22.8268, lng: -43.0533, uf: 'RJ', pais: 'Brasil' },
+  'campos dos goytacazes': { lat: -21.7625, lng: -41.3181, uf: 'RJ', pais: 'Brasil' },
+  'petrópolis': { lat: -22.5050, lng: -43.1789, uf: 'RJ', pais: 'Brasil' },
+  'volta redonda': { lat: -22.5236, lng: -44.1042, uf: 'RJ', pais: 'Brasil' },
+  'macaé': { lat: -22.3706, lng: -41.7864, uf: 'RJ', pais: 'Brasil' },
+
+  // === PR / SC / RS ===
+  'londrina': { lat: -23.3105, lng: -51.1628, uf: 'PR', pais: 'Brasil' },
+  'maringá': { lat: -23.4253, lng: -51.9386, uf: 'PR', pais: 'Brasil' },
+  'foz do iguaçu': { lat: -25.5478, lng: -54.5882, uf: 'PR', pais: 'Brasil' },
+  'cascavel': { lat: -24.9558, lng: -53.4553, uf: 'PR', pais: 'Brasil' },
+  'ponta grossa': { lat: -25.0950, lng: -50.1619, uf: 'PR', pais: 'Brasil' },
+  'caxias do sul': { lat: -29.1678, lng: -51.1794, uf: 'RS', pais: 'Brasil' },
+  'pelotas': { lat: -31.7649, lng: -52.3370, uf: 'RS', pais: 'Brasil' },
+  'santa maria': { lat: -29.6842, lng: -53.8069, uf: 'RS', pais: 'Brasil' },
+  'joinville': { lat: -26.3045, lng: -48.8487, uf: 'SC', pais: 'Brasil' },
+  'blumenau': { lat: -26.9194, lng: -49.0661, uf: 'SC', pais: 'Brasil' },
+  'chapecó': { lat: -27.0967, lng: -52.6181, uf: 'SC', pais: 'Brasil' },
+  'criciúma': { lat: -28.6775, lng: -49.3697, uf: 'SC', pais: 'Brasil' },
+
+  // === ES / BA / outras ===
+  'cariacica': { lat: -20.2639, lng: -40.4197, uf: 'ES', pais: 'Brasil' },
+  'serra': { lat: -20.1289, lng: -40.3078, uf: 'ES', pais: 'Brasil' },
+  'vila velha': { lat: -20.3297, lng: -40.2925, uf: 'ES', pais: 'Brasil' },
+  'linhares': { lat: -19.3939, lng: -40.0678, uf: 'ES', pais: 'Brasil' },
+  'colatina': { lat: -19.5394, lng: -40.6306, uf: 'ES', pais: 'Brasil' },
+  'feira de santana': { lat: -12.2667, lng: -38.9667, uf: 'BA', pais: 'Brasil' },
+  'camamu': { lat: -13.9408, lng: -39.1031, uf: 'BA', pais: 'Brasil' },
+  'ilhéus': { lat: -14.7889, lng: -39.0489, uf: 'BA', pais: 'Brasil' },
+  'itabuna': { lat: -14.7858, lng: -39.2803, uf: 'BA', pais: 'Brasil' },
+  'vitória da conquista': { lat: -14.8611, lng: -40.8442, uf: 'BA', pais: 'Brasil' },
+  'aparecida de goiânia': { lat: -16.8219, lng: -49.2572, uf: 'GO', pais: 'Brasil' },
+  'anápolis': { lat: -16.3267, lng: -48.9528, uf: 'GO', pais: 'Brasil' },
+  'rio verde': { lat: -17.7972, lng: -50.9264, uf: 'GO', pais: 'Brasil' },
+  'santa teresa': { lat: -19.9356, lng: -40.5972, uf: 'ES', pais: 'Brasil' },
+  'canoinhas': { lat: -26.1772, lng: -50.3886, uf: 'SC', pais: 'Brasil' },
 };
 
 export const MG_CENTER: [number, number] = [-18.5, -44.5];
 
-// Capitalização Title Case respeitando acentos
+// === HELPERS ===
+
 function titleCase(s: string): string {
   return s
     .split(' ')
@@ -152,16 +208,14 @@ function titleCase(s: string): string {
     .join(' ');
 }
 
-// === CORREÇÃO CRÍTICA: normalização robusta de "Cidade/UF", "Cidade - UF", "Cidade, UF" ===
+// Remove sufixos "/UF", "-UF", ", UF" e normaliza espaços/acentos.
 export function normalizeCity(text: string): string {
   if (!text) return '';
   let s = text.toLowerCase().trim();
-  // Remove sufixos de UF em qualquer separador: "/", "-", ",", " "
   s = s.replace(/\s*[\/\-,]\s*[a-zçãáéíóúâêô]{2}\s*$/i, '');
-  // Caso ainda sobre " mg" / " sp" no fim (sem separador)
   s = s.replace(/\s+[a-z]{2}\s*$/i, m => {
     const uf = m.trim();
-    return COORD_MAP[uf] ? '' : m; // só remove se for UF reconhecida
+    return COORD_MAP[uf] ? '' : m;
   });
   s = s.split(',')[0].trim();
   s = s.replace(/\s+/g, ' ');
@@ -169,25 +223,69 @@ export function normalizeCity(text: string): string {
   return s;
 }
 
-// === CORREÇÃO CRÍTICA: partial-match seguro (ignora chaves de 2 letras = UFs) ===
-export function findCoordsLocal(text: string): [number, number] | null {
-  if (!text) return null;
-  const normalized = normalizeCity(text);
-  if (!normalized) return null;
-  if (COORD_MAP[normalized]) return COORD_MAP[normalized];
-  for (const [key, coords] of Object.entries(COORD_MAP)) {
-    // Pula UFs (2 letras) — evita "ipatinga" casar com "pa"
-    if (key.length <= 2) continue;
-    if (normalized.includes(key) || key.includes(normalized)) return coords;
-  }
-  return null;
+// Extrai UF de "Cidade-UF" / "Cidade/UF" / "Cidade, UF". Retorna '' se não houver.
+export function extractUF(text: string): string {
+  if (!text) return '';
+  const m = text.match(/[\/\-,]\s*([A-Za-z]{2})\s*$/);
+  return m ? m[1].toUpperCase() : '';
 }
 
-// Lista de cidades base (sem UFs duplicadas) para autocomplete
-export const KNOWN_CITIES: string[] = Array.from(
-  new Set(
-    Object.keys(COORD_MAP)
-      .filter(k => k.length > 2) // remove UFs como 'sp', 'mg'
-      .map(titleCase)
-  )
-).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+// Formata "cidade-uf" canônico (ex.: "Ipatinga-MG") a partir de uma chave do COORD_MAP.
+export function formatCityWithUF(cityKey: string): string {
+  const data = COORD_MAP[cityKey];
+  if (!data) return titleCase(cityKey);
+  return `${titleCase(cityKey)}-${data.uf}`;
+}
+
+// === Lookup robusto: retorna [lat, lng] aceitando "Cidade", "Cidade-UF", "Cidade/UF" ===
+export function findCoordsLocal(text: string): [number, number] | null {
+  if (!text) return null;
+  const uf = extractUF(text);
+  const normalized = normalizeCity(text);
+  if (!normalized) return null;
+
+  // Match exato + UF (desambigua homônimos: "rio branco" AC vs "visconde do rio branco" MG)
+  if (uf && COORD_MAP[normalized] && COORD_MAP[normalized].uf === uf) {
+    const c = COORD_MAP[normalized];
+    return [c.lat, c.lng];
+  }
+  if (COORD_MAP[normalized]) {
+    const c = COORD_MAP[normalized];
+    return [c.lat, c.lng];
+  }
+  // Partial-match seguro: ignora UFs (chaves de 2 letras) e prioriza match com UF compatível
+  const candidates: { key: string; data: CityCoord }[] = [];
+  for (const [key, data] of Object.entries(COORD_MAP)) {
+    if (key.length <= 2) continue;
+    if (normalized.includes(key) || key.includes(normalized)) {
+      candidates.push({ key, data });
+    }
+  }
+  if (candidates.length === 0) return null;
+  if (uf) {
+    const ufMatch = candidates.find(c => c.data.uf === uf);
+    if (ufMatch) return [ufMatch.data.lat, ufMatch.data.lng];
+  }
+  return [candidates[0].data.lat, candidates[0].data.lng];
+}
+
+// === LISTA PARA AUTOCOMPLETE — formato "Cidade-UF" com UF visível ===
+export interface KnownCity {
+  key: string;          // chave normalizada no COORD_MAP
+  display: string;      // "Cidade-UF" pronto para preencher o campo
+  city: string;         // "Cidade" Title Case
+  uf: string;           // "MG"
+}
+
+export const KNOWN_CITIES_FULL: KnownCity[] = Object.entries(COORD_MAP)
+  .filter(([k]) => k.length > 2) // remove UFs
+  .map(([key, data]) => ({
+    key,
+    display: `${titleCase(key)}-${data.uf}`,
+    city: titleCase(key),
+    uf: data.uf,
+  }))
+  .sort((a, b) => a.display.localeCompare(b.display, 'pt-BR'));
+
+// Mantido para compatibilidade com o autocomplete antigo (lista de strings simples)
+export const KNOWN_CITIES: string[] = KNOWN_CITIES_FULL.map(c => c.display);
