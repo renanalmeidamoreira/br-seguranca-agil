@@ -13,6 +13,7 @@ import SchedulePage from '@/pages/SchedulePage';
 import SearchPage from '@/pages/SearchPage';
 import AnalyticsPage from '@/pages/AnalyticsPage';
 import LogsPage from '@/pages/LogsPage';
+import TelegramPage from '@/pages/TelegramPage';
 
 function MainContent() {
   const { activePage } = useApp();
@@ -24,6 +25,7 @@ function MainContent() {
     checklist: <ChecklistPage />,
     risco: <RiskPage />,
     busca: <SearchPage />,
+    telegram: <TelegramPage />,
     analise: <AnalyticsPage />,
     logs: <LogsPage />,
   };
