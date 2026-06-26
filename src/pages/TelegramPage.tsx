@@ -18,7 +18,7 @@ import {
 import {
   Send, Settings2, CheckCircle2, AlertTriangle, MessageCircle, ExternalLink, Trash2,
 } from 'lucide-react';
-import ConfirmDeleteDialog from '@/components/ui/confirm-dialog';
+import { ConfirmDeleteDialog } from '@/components/ui/confirm-dialog';
 
 const STORAGE_KEY = 'synapse_telegram_config_v1';
 const HISTORY_KEY = 'synapse_telegram_history_v1';
@@ -324,7 +324,7 @@ export default function TelegramPage() {
         open={confirmClear}
         onOpenChange={setConfirmClear}
         onConfirm={clearHistory}
-        title="Limpar histórico?"
+        itemLabel="o histórico"
         description="Esta ação remove todo o histórico local de consultas Telegram. As mensagens já enviadas ao chat não são removidas."
       />
     </div>
