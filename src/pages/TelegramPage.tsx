@@ -249,7 +249,7 @@ export default function TelegramPage() {
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <MessageCircle className="w-7 h-7 text-primary" /> Inteligência Telegram & Instagram
         </h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {config.presets.map(p => (
             <Button key={p.id} variant="outline" size="sm" onClick={() => openPreset(p)}>
               {p.platform === 'instagram'
@@ -268,7 +268,7 @@ export default function TelegramPage() {
       </p>
 
       <Tabs defaultValue="link" className="w-full">
-        <TabsList>
+        <TabsList className="max-w-full overflow-x-auto justify-start">
           <TabsTrigger value="link"><LinkIcon className="w-4 h-4 mr-1" />Modo Link (recomendado)</TabsTrigger>
           <TabsTrigger value="bot"><Bot className="w-4 h-4 mr-1" />Modo Bot API (futuro)</TabsTrigger>
           <TabsTrigger value="config"><Settings2 className="w-4 h-4 mr-1" />Configuração</TabsTrigger>

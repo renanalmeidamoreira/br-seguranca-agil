@@ -146,7 +146,7 @@ export default function CasesPage() {
             value={searchTerm}
             onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
             placeholder="Buscar..."
-            className="bg-secondary border border-border rounded-lg px-3 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="bg-secondary border border-border rounded-lg px-3 py-2 w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <select
             value={filterSeverity}

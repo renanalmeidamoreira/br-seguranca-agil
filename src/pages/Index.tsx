@@ -33,7 +33,7 @@ function MainContent() {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <main className="flex-1 p-6 pb-14 overflow-y-auto synapse-scrollbar">
+      <main className="flex-1 min-w-0 p-3 sm:p-4 md:p-6 pb-16 overflow-y-auto overflow-x-hidden synapse-scrollbar">
         {pageMap[activePage] || <DashboardPage />}
       </main>
       <AlertContainer />

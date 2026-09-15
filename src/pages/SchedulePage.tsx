@@ -292,10 +292,10 @@ export default function SchedulePage() {
       {/* Controls */}
       <Card>
         <CardContent className="p-4 flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 flex-wrap min-w-0">
             <label className="text-sm font-medium">Visualizar Ano:</label>
             <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)}
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+              className="h-10 max-w-full rounded-md border border-input bg-background px-3 text-sm">
               {schedules.length === 0 && <option value="">Nenhum cronograma</option>}
               {schedules.sort((a, b) => b.year - a.year).map(s => (
                 <option key={s.year} value={s.year}>{s.year}</option>
