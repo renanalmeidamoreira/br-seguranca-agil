@@ -188,11 +188,11 @@ export default function ChecklistPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <ClipboardCheck className="w-7 h-7 text-primary" /> Checklist da Distribuição
         </h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {/* === NOVA FUNCIONALIDADE: Exportar Excel === */}
           <Button
             variant="outline"
@@ -395,7 +395,7 @@ export default function ChecklistPage() {
             <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhum checklist registrado.</CardContent></Card>
           ) : checklists.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(cl => (
             <Card key={cl.id} className="hover:border-primary/30 transition-colors">
-              <CardContent className="p-4 flex items-center justify-between">
+              <CardContent className="p-4 flex items-center justify-between flex-wrap gap-3">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm font-mono text-primary">{cl.displayId}</span>

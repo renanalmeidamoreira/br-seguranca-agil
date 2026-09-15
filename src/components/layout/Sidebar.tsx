@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useApp } from '@/contexts/AppContext';
 import {
   BarChart3, FolderOpen, CheckSquare, Shield, Search,
@@ -35,14 +36,21 @@ const ACCENT_COLOR_MAP: Record<string, string> = {
 
 export default function Sidebar() {
   const { activePage, setActivePage, currentUser } = useApp();
+  const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
+
+  // Em telas estreitas a barra inicia recolhida para o conteúdo caber na tela
+  useEffect(() => {
+    setCollapsed(isMobile);
+  }, [isMobile]);
+
   const UserIcon = ICON_MAP[currentUser.icon] || User;
   const accentColor = ACCENT_COLOR_MAP[(currentUser as any).accentColor || 'cyan'] || ACCENT_COLOR_MAP.cyan;
 
   return (
     <aside
-      className={`relative flex flex-col bg-card border-r border-border h-screen transition-all duration-200 ${
-        collapsed ? 'w-16' : 'w-64'
+      className={`relative flex flex-col shrink-0 bg-card border-r border-border h-screen transition-all duration-200 ${
+        collapsed ? 'w-16' : 'w-56 lg:w-64'
       }`}
     >
       {/* Toggle flutuante */}

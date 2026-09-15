@@ -52,11 +52,11 @@ export default function LogsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <History className="w-7 h-7 text-primary" /> Logs de Atividade
         </h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={exportLogs}><Download className="w-4 h-4 mr-1" /> Exportar CSV</Button>
           {/* === NOVA FUNCIONALIDADE: Exportar Excel (respeita filtro) === */}
           <Button
@@ -80,7 +80,7 @@ export default function LogsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card><CardContent className="p-4 text-center">
           <p className="text-3xl font-bold text-primary">{logs.length}</p>
           <p className="text-xs text-muted-foreground">Total de Registros</p>

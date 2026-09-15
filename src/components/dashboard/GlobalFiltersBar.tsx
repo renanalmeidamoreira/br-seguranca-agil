@@ -52,7 +52,7 @@ export default function GlobalFiltersBar({ cases }: Props) {
       <select
         value={filters.unit}
         onChange={e => setFilter('unit', e.target.value)}
-        className="text-sm rounded-md px-2 py-1.5 bg-secondary border border-border text-foreground max-w-[200px]"
+        className="text-sm rounded-md px-2 py-1.5 bg-secondary border border-border text-foreground min-w-0 max-w-full sm:max-w-[200px]"
       >
         <option value="all">Todas as unidades</option>
         {units.map(u => <option key={u} value={u}>{u}</option>)}
@@ -61,7 +61,7 @@ export default function GlobalFiltersBar({ cases }: Props) {
       <select
         value={filters.type}
         onChange={e => setFilter('type', e.target.value)}
-        className="text-sm rounded-md px-2 py-1.5 bg-secondary border border-border text-foreground max-w-[220px]"
+        className="text-sm rounded-md px-2 py-1.5 bg-secondary border border-border text-foreground min-w-0 max-w-full sm:max-w-[220px]"
       >
         <option value="all">Todos os tipos</option>
         {types.map(t => <option key={t} value={t}>{t}</option>)}
