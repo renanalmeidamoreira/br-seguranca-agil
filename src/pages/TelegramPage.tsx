@@ -268,7 +268,7 @@ export default function TelegramPage() {
       </p>
 
       <Tabs defaultValue="link" className="w-full">
-        <TabsList>
+        <TabsList className="max-w-full overflow-x-auto justify-start">
           <TabsTrigger value="link"><LinkIcon className="w-4 h-4 mr-1" />Modo Link (recomendado)</TabsTrigger>
           <TabsTrigger value="bot"><Bot className="w-4 h-4 mr-1" />Modo Bot API (futuro)</TabsTrigger>
           <TabsTrigger value="config"><Settings2 className="w-4 h-4 mr-1" />Configuração</TabsTrigger>
