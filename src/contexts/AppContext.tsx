@@ -8,10 +8,32 @@ interface AlertMessage {
   type: 'success' | 'error' | 'info' | 'warning';
 }
 
+export interface UserProfileSettings {
+  name: string;
+  role: string;
+  unit?: string;
+  icon: string;
+  accentColor?: string;
+  avatarUrl?: string;
+}
+
+const PROFILE_KEY = 'synapse_profile_v1';
+
+function loadProfile(): UserProfileSettings {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    if (raw) return { ...USERS[0], accentColor: 'cyan', ...JSON.parse(raw) };
+  } catch (e) {
+    console.error('Erro ao carregar perfil:', e);
+  }
+  return { ...USERS[0], accentColor: 'cyan' };
+}
+
 interface AppContextType {
-  currentUser: UserProfile;
+  currentUser: UserProfileSettings;
   currentUserIndex: number;
   switchUser: (index: number) => void;
+  updateProfile: (profile: UserProfileSettings) => void;
   cases: CaseData[];
   refreshCases: () => void;
   addCase: (data: CaseData) => void;
