@@ -134,7 +134,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AppContext.Provider value={{
-      currentUser, currentUserIndex, switchUser,
+      currentUser, currentUserIndex, switchUser, updateProfile,
       cases, refreshCases, addCase, updateCase, deleteCase,
       alerts, showAlert, log,
       activePage, setActivePage,
