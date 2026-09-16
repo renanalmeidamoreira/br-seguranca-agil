@@ -8,10 +8,32 @@ interface AlertMessage {
   type: 'success' | 'error' | 'info' | 'warning';
 }
 
+export interface UserProfileSettings {
+  name: string;
+  role: string;
+  unit?: string;
+  icon: string;
+  accentColor?: string;
+  avatarUrl?: string;
+}
+
+const PROFILE_KEY = 'synapse_profile_v1';
+
+function loadProfile(): UserProfileSettings {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    if (raw) return { ...USERS[0], accentColor: 'cyan', ...JSON.parse(raw) };
+  } catch (e) {
+    console.error('Erro ao carregar perfil:', e);
+  }
+  return { ...USERS[0], accentColor: 'cyan' };
+}
+
 interface AppContextType {
-  currentUser: UserProfile;
+  currentUser: UserProfileSettings;
   currentUserIndex: number;
   switchUser: (index: number) => void;
+  updateProfile: (profile: UserProfileSettings) => void;
   cases: CaseData[];
   refreshCases: () => void;
   addCase: (data: CaseData) => void;
@@ -37,7 +59,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [activePage, setActivePage] = useState('dashboard');
   const [pendingItem, setPendingItem] = useState<{ module: string; id: string } | null>(null);
 
-  const currentUser = USERS[currentUserIndex];
+  const [profile, setProfile] = useState<UserProfileSettings>(() => loadProfile());
+  const currentUser = profile;
+
+  const updateProfile = useCallback((next: UserProfileSettings) => {
+    setProfile(next);
+    try {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
+    } catch (e) {
+      console.error('Erro ao salvar perfil:', e);
+    }
+  }, []);
 
   const refreshCases = useCallback(() => {
     setCases(localDB.load<CaseData>(DB_KEYS.occurrences));
@@ -102,7 +134,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AppContext.Provider value={{
-      currentUser, currentUserIndex, switchUser,
+      currentUser, currentUserIndex, switchUser, updateProfile,
       cases, refreshCases, addCase, updateCase, deleteCase,
       alerts, showAlert, log,
       activePage, setActivePage,
