@@ -59,7 +59,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [activePage, setActivePage] = useState('dashboard');
   const [pendingItem, setPendingItem] = useState<{ module: string; id: string } | null>(null);
 
-  const currentUser = USERS[currentUserIndex];
+  const [profile, setProfile] = useState<UserProfileSettings>(() => loadProfile());
+  const currentUser = profile;
+
+  const updateProfile = useCallback((next: UserProfileSettings) => {
+    setProfile(next);
+    try {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
+    } catch (e) {
+      console.error('Erro ao salvar perfil:', e);
+    }
+  }, []);
 
   const refreshCases = useCallback(() => {
     setCases(localDB.load<CaseData>(DB_KEYS.occurrences));
