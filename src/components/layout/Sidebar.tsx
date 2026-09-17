@@ -5,9 +5,10 @@ import {
   BarChart3, FolderOpen, CheckSquare, Shield, Search,
   GitBranch, History, CalendarDays, MessageCircle,
   User, UserCog, HardHat, Briefcase, Eye, Lock, Wrench, Truck, HeartPulse,
-  PanelLeftClose, PanelLeftOpen,
+  PanelLeftClose, PanelLeftOpen, Settings,
 } from 'lucide-react';
 import InstallPWA from '@/components/pwa/InstallPWA';
+import ProfileSettingsModal from '@/components/users/ProfileSettingsModal';
 import type { LucideIcon } from 'lucide-react';
 
 const navItems = [
@@ -151,6 +152,13 @@ export default function Sidebar() {
 
         {!collapsed && <InstallPWA />}
       </div>
+
+      <ProfileSettingsModal
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        profile={currentUser}
+        onSave={updateProfile}
+      />
     </aside>
   );
 }
